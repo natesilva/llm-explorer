@@ -16,12 +16,27 @@ class LLMEngine:
     def initialize(self):
         self.lock = threading.Lock()
         model_path = get_model_path()
+        self.load_model(model_path)
+
+    def load_model(self, model_path: str):
+        if hasattr(self, "lock"):
+            with self.lock:
+                self._load_internal(model_path)
+        else:
+            self._load_internal(model_path)
+
+    def _load_internal(self, model_path):
+        if hasattr(self, "model") and self.model:
+            del self.model
+            import gc
+
+            gc.collect()
+
         # n_gpu_layers=-1 for full Metal offload
         self.model = Llama(
             model_path=model_path,
             n_gpu_layers=-1,
             n_ctx=2048,  # Reasonable context
-            logits_all=True,
             verbose=False,
         )
 
