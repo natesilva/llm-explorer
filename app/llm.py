@@ -1,6 +1,7 @@
 from llama_cpp import Llama
 from app.utils import get_model_path
 import math
+import threading
 
 
 class LLMEngine:
@@ -13,6 +14,7 @@ class LLMEngine:
         return cls._instance
 
     def initialize(self):
+        self.lock = threading.Lock()
         model_path = get_model_path()
         # n_gpu_layers=-1 for full Metal offload
         self.model = Llama(
@@ -27,14 +29,15 @@ class LLMEngine:
         # We generate 1 token but ask for logprobs
         # Note: llama-cpp-python returns logprobs for the *generated* token position
 
-        output = self.model.create_completion(
-            prompt,
-            max_tokens=1,
-            temperature=temp,
-            top_k=top_k,
-            logprobs=top_k,  # We want probabilities for top_k candidates
-            echo=False,
-        )
+        with self.lock:
+            output = self.model.create_completion(
+                prompt,
+                max_tokens=1,
+                temperature=temp,
+                top_k=top_k,
+                logprobs=top_k,  # We want probabilities for top_k candidates
+                echo=False,
+            )
 
         # Parse output
         choice = output["choices"][0]

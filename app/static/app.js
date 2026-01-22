@@ -78,7 +78,8 @@ contextInput.addEventListener('input', () => {
 [tempSlider, topkSlider].forEach(input => {
     input.addEventListener('input', (e) => {
         e.target.previousElementSibling.querySelector('span').textContent = e.target.value;
-        fetchCandidates();
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(fetchCandidates, 500);
     });
 });
 
