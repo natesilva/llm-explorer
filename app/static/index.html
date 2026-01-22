@@ -10,8 +10,10 @@
     <div class="container">
         <header>
             <h1>LLM Explorer</h1>
-            <button id="open-help" class="icon-btn" title="Help">?</button>
-            <div id="status">Llama 3.1 8B</div>
+            <div class="header-controls">
+                <button id="model-selector" class="status-btn">Llama 3.1 8B ▾</button>
+                <button id="open-help" class="icon-btn" title="Help">?</button>
+            </div>
         </header>
         
         <main>
@@ -70,6 +72,37 @@
                 <h3>Repetition Penalty</h3>
                 <p>Discourages the model from repeating words that have already appeared in the context. Values > 1.0 reduce the probability of repeated tokens.</p>
             </section>
+        </div>
+    </div>
+    <div id="model-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Model Manager</h2>
+                <button id="close-model-modal" class="icon-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="local">Local Library</button>
+                    <button class="tab-btn" data-tab="remote">Download New</button>
+                </div>
+                
+                <div id="tab-local" class="tab-content active">
+                    <ul id="local-model-list" class="model-list">
+                        <!-- Loaded dynamically -->
+                    </ul>
+                </div>
+                
+                <div id="tab-remote" class="tab-content">
+                    <div class="search-box">
+                        <input type="text" id="repo-input" placeholder="Repo ID (e.g. bartowski/Llama-3.2-1B-Instruct-GGUF)">
+                        <button id="scan-btn">Scan</button>
+                    </div>
+                    <ul id="remote-file-list" class="model-list"></ul>
+                    <div id="download-progress" class="hidden">
+                        <p>Downloading... <span id="dl-status"></span></p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     <script src="/static/app.js"></script>

@@ -116,3 +116,148 @@ if (openHelpBtn && closeHelpBtn && helpOverlay && helpPanel) {
     closeHelpBtn.addEventListener('click', () => toggleHelp(false));
     helpOverlay.addEventListener('click', () => toggleHelp(false));
 }
+
+// Model Manager Logic
+const modelModal = document.getElementById('model-modal');
+const modelSelectorBtn = document.getElementById('model-selector');
+const closeModelModalBtn = document.getElementById('close-model-modal');
+const tabBtns = document.querySelectorAll('.tab-btn');
+const tabContents = document.querySelectorAll('.tab-content');
+const localModelList = document.getElementById('local-model-list');
+const remoteFileList = document.getElementById('remote-file-list');
+const repoInput = document.getElementById('repo-input');
+const scanBtn = document.getElementById('scan-btn');
+const dlStatus = document.getElementById('dl-status');
+const dlProgress = document.getElementById('download-progress');
+
+// Toggle Modal
+function toggleModelModal(show) {
+    if (show) {
+        modelModal.classList.remove('hidden');
+        loadLocalModels();
+    } else {
+        modelModal.classList.add('hidden');
+    }
+}
+
+if (modelSelectorBtn) {
+    modelSelectorBtn.addEventListener('click', () => toggleModelModal(true));
+    closeModelModalBtn.addEventListener('click', () => toggleModelModal(false));
+}
+
+// Tabs
+tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        tabBtns.forEach(b => b.classList.remove('active'));
+        tabContents.forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+    });
+});
+
+// API Calls
+async function loadLocalModels() {
+    localModelList.innerHTML = '<li>Loading...</li>';
+    try {
+        const res = await fetch('/models');
+        const models = await res.json();
+        localModelList.innerHTML = '';
+        models.forEach(m => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <div class="model-info">
+                    <strong>${m.filename}</strong>
+                    <small>${m.size_mb} MB</small>
+                </div>
+                <button class="action-btn" onclick="switchModel('${m.filename}')">Load</button>
+            `;
+            localModelList.appendChild(li);
+        });
+    } catch (e) {
+        localModelList.innerHTML = `<li>Error: ${e}</li>`;
+    }
+}
+
+async function switchModel(filename) {
+    modelSelectorBtn.textContent = "Loading...";
+    toggleModelModal(false);
+    try {
+        const res = await fetch('/models/switch', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({filename})
+        });
+        if (!res.ok) throw new Error("Failed to switch");
+        const data = await res.json();
+        modelSelectorBtn.textContent = data.model + " ▾";
+        alert("Model switched successfully!");
+    } catch (e) {
+        alert("Error switching model: " + e);
+        modelSelectorBtn.textContent = "Error ▾";
+    }
+}
+
+// Scan Remote
+if (scanBtn) {
+    scanBtn.addEventListener('click', async () => {
+        const repo = repoInput.value.trim();
+        if (!repo) return;
+        
+        remoteFileList.innerHTML = '<li>Scanning...</li>';
+        try {
+            const res = await fetch(`/models/lookup?repo_id=${encodeURIComponent(repo)}`);
+            const files = await res.json();
+            
+            if (files.error) throw new Error(files.error);
+            
+            remoteFileList.innerHTML = '';
+            if (files.length === 0) {
+                remoteFileList.innerHTML = '<li>No GGUF files found.</li>';
+                return;
+            }
+            
+            files.forEach(f => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div class="model-info">
+                        <strong>${f.filename}</strong>
+                        <small>${f.size_mb} MB</small>
+                    </div>
+                    <button class="action-btn" onclick="downloadModel('${repo}', '${f.filename}')">Download</button>
+                `;
+                remoteFileList.appendChild(li);
+            });
+        } catch (e) {
+            remoteFileList.innerHTML = `<li>Error: ${e.message}</li>`;
+        }
+    });
+}
+
+// Download
+window.downloadModel = async (repo, filename) => {
+    if (!confirm(`Download ${filename}? This may take a while.`)) return;
+    
+    dlProgress.classList.remove('hidden');
+    dlStatus.textContent = "Starting...";
+    
+    try {
+        const res = await fetch('/models/download', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({repo_id: repo, filename})
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            dlStatus.textContent = "Done!";
+            alert("Download complete!");
+            loadLocalModels(); // Refresh list
+        } else {
+            throw new Error("Download failed");
+        }
+    } catch (e) {
+        dlStatus.textContent = "Error: " + e;
+    }
+};
+
+// Make switchModel global
+window.switchModel = switchModel;
