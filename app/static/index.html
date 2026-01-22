@@ -10,6 +10,7 @@
     <div class="container">
         <header>
             <h1>LLM Explorer</h1>
+            <button id="open-help" class="icon-btn" title="Help">?</button>
             <div id="status">Llama 3.1 8B</div>
         </header>
         
@@ -45,6 +46,31 @@
                 <input type="range" id="penalty-slider" min="1.0" max="2.0" step="0.1" value="1.0">
             </div>
         </footer>
+    </div>
+    <div id="help-overlay" class="overlay hidden"></div>
+    <div id="help-panel" class="panel-slideover hidden">
+        <div class="panel-header">
+            <h2>Parameter Guide</h2>
+            <button id="close-help" class="icon-btn">&times;</button>
+        </div>
+        <div class="panel-content">
+            <section>
+                <h3>Temperature</h3>
+                <p>Controls the randomness of the model. Lower values (e.g., 0.1) make the model deterministic and focused. Higher values (e.g., 1.0+) make it more creative and diverse.</p>
+            </section>
+            <section>
+                <h3>Top K</h3>
+                <p>Limits the choice to the top K most likely tokens. This hard cutoff removes the "long tail" of unlikely words entirely.</p>
+            </section>
+            <section>
+                <h3>Top P (Nucleus)</h3>
+                <p>Selects the smallest set of tokens whose cumulative probability exceeds P. A dynamic cutoff that adapts to how certain the model is.</p>
+            </section>
+            <section>
+                <h3>Repetition Penalty</h3>
+                <p>Discourages the model from repeating words that have already appeared in the context. Values > 1.0 reduce the probability of repeated tokens.</p>
+            </section>
+        </div>
     </div>
     <script src="/static/app.js"></script>
 </body>
