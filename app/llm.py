@@ -38,7 +38,9 @@ class LLMEngine:
             n_gpu_layers=-1,
             n_ctx=2048,  # Reasonable context
             verbose=False,
+            logits_all=True,
         )
+        print(f"Model loaded: {model_path}")
 
     def get_next_tokens(
         self,
