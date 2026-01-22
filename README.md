@@ -2,7 +2,8 @@
 
 An interactive UI for exploring next-token probabilities from local GGUF models via `llama-cpp-python`. This project includes a FastAPI backend and a static frontend that visualizes candidate tokens, their probabilities, and sampling controls.
 
-**Inspiration:** https://www.youtube.com/watch?v=vrO8tZ0hHGk
+**Inspiration:** https://www.youtube.com/watch?v=vrO8tZ0hHGk  
+Vibe-coded using OpenCode and Gemini 3 Pro.
 
 ## Features
 
