@@ -93,3 +93,26 @@ contextInput.addEventListener('input', () => {
 // Initial load
 contextInput.value = "Once upon a time, there was a";
 fetchCandidates();
+
+// Help Panel Logic
+const helpOverlay = document.getElementById('help-overlay');
+const helpPanel = document.getElementById('help-panel');
+const openHelpBtn = document.getElementById('open-help');
+const closeHelpBtn = document.getElementById('close-help');
+
+function toggleHelp(show) {
+    if (show) {
+        helpOverlay.classList.remove('hidden');
+        helpPanel.classList.remove('hidden');
+    } else {
+        helpOverlay.classList.add('hidden');
+        helpPanel.classList.add('hidden');
+    }
+}
+
+// Check if elements exist (in case of partial load or caching issues)
+if (openHelpBtn && closeHelpBtn && helpOverlay && helpPanel) {
+    openHelpBtn.addEventListener('click', () => toggleHelp(true));
+    closeHelpBtn.addEventListener('click', () => toggleHelp(false));
+    helpOverlay.addEventListener('click', () => toggleHelp(false));
+}
