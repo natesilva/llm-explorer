@@ -36,6 +36,14 @@
                 <label>Top K: <span id="topk-val">40</span></label>
                 <input type="range" id="topk-slider" min="1" max="100" value="40">
             </div>
+            <div class="control-group">
+                <label>Top P: <span id="topp-val">0.95</span></label>
+                <input type="range" id="topp-slider" min="0.0" max="1.0" step="0.05" value="0.95">
+            </div>
+            <div class="control-group">
+                <label>Penalty: <span id="penalty-val">1.0</span></label>
+                <input type="range" id="penalty-slider" min="1.0" max="2.0" step="0.1" value="1.0">
+            </div>
         </footer>
     </div>
     <script src="/static/app.js"></script>

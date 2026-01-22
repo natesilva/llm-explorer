@@ -2,6 +2,8 @@ const contextInput = document.getElementById('context-window');
 const candidatesList = document.getElementById('candidates-list');
 const tempSlider = document.getElementById('temp-slider');
 const topkSlider = document.getElementById('topk-slider');
+const toppSlider = document.getElementById('topp-slider');
+const penaltySlider = document.getElementById('penalty-slider');
 
 // State
 let debounceTimer;
@@ -17,7 +19,9 @@ async function fetchCandidates() {
             body: JSON.stringify({
                 text: text,
                 temp: parseFloat(tempSlider.value),
-                top_k: parseInt(topkSlider.value)
+                top_k: parseInt(topkSlider.value),
+                top_p: parseFloat(toppSlider.value),
+                repeat_penalty: parseFloat(penaltySlider.value)
             })
         });
         
@@ -36,6 +40,9 @@ function renderCandidates(candidates) {
     candidates.forEach(c => {
         const div = document.createElement('div');
         div.className = 'candidate-item';
+        if (c.excluded) {
+            div.classList.add('excluded');
+        }
         div.onclick = () => selectToken(c.token);
         
         div.innerHTML = `
@@ -75,7 +82,7 @@ contextInput.addEventListener('input', () => {
 });
 
 // Update controls
-[tempSlider, topkSlider].forEach(input => {
+[tempSlider, topkSlider, toppSlider, penaltySlider].forEach(input => {
     input.addEventListener('input', (e) => {
         e.target.previousElementSibling.querySelector('span').textContent = e.target.value;
         clearTimeout(debounceTimer);

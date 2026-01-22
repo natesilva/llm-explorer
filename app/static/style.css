@@ -119,3 +119,12 @@ footer {
     align-items: center;
     gap: 1rem;
 }
+
+.excluded {
+    opacity: 0.4;
+    text-decoration: line-through;
+}
+
+.excluded .prob-bar {
+    background-color: #555;
+}
