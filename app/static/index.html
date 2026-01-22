@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Explorer</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>LLM Explorer</h1>
+            <div id="status">Llama 3.1 8B</div>
+        </header>
+        
+        <main>
+            <div class="panel left">
+                <h2>Context</h2>
+                <textarea id="context-window" placeholder="Type here or select a prompt..."></textarea>
+            </div>
+            
+            <div class="panel right">
+                <h2>Next Token Probability</h2>
+                <div id="candidates-list">
+                    <!-- Items injected here -->
+                </div>
+            </div>
+        </main>
+        
+        <footer>
+            <div class="control-group">
+                <label>Temperature: <span id="temp-val">0.8</span></label>
+                <input type="range" id="temp-slider" min="0" max="2" step="0.1" value="0.8">
+            </div>
+            <div class="control-group">
+                <label>Top K: <span id="topk-val">40</span></label>
+                <input type="range" id="topk-slider" min="1" max="100" value="40">
+            </div>
+        </footer>
+    </div>
+    <script src="/static/app.js"></script>
+</body>
+</html>
