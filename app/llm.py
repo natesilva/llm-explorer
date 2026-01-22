@@ -46,11 +46,29 @@ class LLMEngine:
 
         top_logprobs = choice["logprobs"]["top_logprobs"][0]
 
-        results = []
+        candidates = []
         for token_text, logprob in top_logprobs.items():
-            prob = math.exp(logprob) * 100
-            results.append({"token": token_text, "prob": prob, "logprob": logprob})
+            prob = math.exp(logprob)
+            candidates.append({"token": token_text, "prob": prob, "logprob": logprob})
+
+        # Apply temperature scaling for visualization
+        if temp < 1e-5:
+            # Greedy: Max prob gets 100%, others 0%
+            if candidates:
+                best = max(candidates, key=lambda x: x["prob"])
+                for c in candidates:
+                    c["prob"] = 100.0 if c == best else 0.0
+        else:
+            # Apply P' = P^(1/T) and re-normalize
+            sum_p = 0.0
+            for c in candidates:
+                c["prob"] = c["prob"] ** (1.0 / temp)
+                sum_p += c["prob"]
+
+            if sum_p > 0:
+                for c in candidates:
+                    c["prob"] = (c["prob"] / sum_p) * 100.0
 
         # Sort by probability descending
-        results.sort(key=lambda x: x["prob"], reverse=True)
-        return results
+        candidates.sort(key=lambda x: x["prob"], reverse=True)
+        return candidates
