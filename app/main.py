@@ -26,7 +26,11 @@ def get_next_tokens(request: GenerationRequest):
     engine = LLMEngine()  # Singleton access
     try:
         candidates = engine.get_next_tokens(
-            request.text, temp=request.temp, top_k=request.top_k
+            request.text,
+            temp=request.temp,
+            top_k=request.top_k,
+            top_p=request.top_p,
+            repeat_penalty=request.repeat_penalty,
         )
         return {"candidates": candidates}
     except Exception as e:
