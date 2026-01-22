@@ -1,2 +1,10 @@
 # Worktree directory
 .worktrees/
+
+# Python
+__pycache__/
+*.pyc
+*.log
+
+# Models
+app/models/

@@ -19,6 +19,7 @@ class LLMEngine:
             model_path=model_path,
             n_gpu_layers=-1,
             n_ctx=2048,  # Reasonable context
+            logits_all=True,
             verbose=False,
         )
 
