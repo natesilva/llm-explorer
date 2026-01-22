@@ -25,41 +25,57 @@ class LLMEngine:
             verbose=False,
         )
 
-    def get_next_tokens(self, prompt: str, temp: float = 0.8, top_k: int = 40):
-        # We generate 1 token but ask for logprobs
-        # Note: llama-cpp-python returns logprobs for the *generated* token position
-
+    def get_next_tokens(
+        self,
+        prompt: str,
+        temp: float = 0.8,
+        top_k: int = 40,
+        top_p: float = 0.95,
+        repeat_penalty: float = 1.0,
+    ):
         with self.lock:
             output = self.model.create_completion(
                 prompt,
                 max_tokens=1,
                 temperature=temp,
                 top_k=top_k,
-                logprobs=top_k,  # We want probabilities for top_k candidates
+                logprobs=top_k,
                 echo=False,
             )
 
-        # Parse output
         choice = output["choices"][0]
-        # The API structure for logprobs in completion can be tricky.
-        # Usually choice['logprobs']['top_logprobs'][0] contains the dict of top tokens
-
         top_logprobs = choice["logprobs"]["top_logprobs"][0]
 
         candidates = []
+
+        # Helper to check if token is in context (simple string match for demo)
+        # Real implementation would use token IDs.
+        # This is an approximation.
+
         for token_text, logprob in top_logprobs.items():
+            # Apply Repetition Penalty (Approximate)
+            # If token appears in prompt, penalize logprob
+            # We treat logprob as logit for this approximation
+
+            # Simple check: is the token text in the prompt?
+            # Note: token_text might have leading space.
+            clean_token = token_text.strip()
+            if clean_token and clean_token in prompt:
+                # Apply penalty. If logprob < 0 and penalty > 1,
+                # we make it MORE negative (smaller prob).
+                # logprob * penalty
+                logprob = logprob * repeat_penalty
+
             prob = math.exp(logprob)
             candidates.append({"token": token_text, "prob": prob, "logprob": logprob})
 
-        # Apply temperature scaling for visualization
+        # Apply Temperature (Reuse existing logic)
         if temp < 1e-5:
-            # Greedy: Max prob gets 100%, others 0%
             if candidates:
                 best = max(candidates, key=lambda x: x["prob"])
                 for c in candidates:
                     c["prob"] = 100.0 if c == best else 0.0
         else:
-            # Apply P' = P^(1/T) and re-normalize
             sum_p = 0.0
             for c in candidates:
                 c["prob"] = c["prob"] ** (1.0 / temp)
@@ -71,4 +87,23 @@ class LLMEngine:
 
         # Sort by probability descending
         candidates.sort(key=lambda x: x["prob"], reverse=True)
+
+        # Calculate Top-P Exclusion
+        current_cum = 0.0
+        cutoff_reached = False
+
+        for c in candidates:
+            current_cum += c["prob"]
+            c["cumulative_prob"] = current_cum
+
+            if cutoff_reached:
+                c["excluded"] = True
+            else:
+                c["excluded"] = False
+
+            # If this token pushes us over Top-P, subsequent ones are excluded
+            # (Note: Standard Top-P includes the token that crosses the threshold)
+            if current_cum >= (top_p * 100.0):  # top_p is 0-1, probs are 0-100
+                cutoff_reached = True
+
         return candidates
