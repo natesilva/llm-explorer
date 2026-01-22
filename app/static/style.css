@@ -120,6 +120,20 @@ footer {
     gap: 1rem;
 }
 
+.control-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 140px; /* Ensure label itself is stable */
+}
+
+.control-group label span {
+    display: inline-block;
+    width: 3.5ch; /* Fixed width for the number */
+    text-align: right;
+    font-family: monospace;
+}
+
 .excluded {
     opacity: 0.4;
     text-decoration: line-through;
