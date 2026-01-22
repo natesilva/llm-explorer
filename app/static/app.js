@@ -72,6 +72,7 @@ function escapeHtml(text) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;")
+        .replace(/\n/g, "␤") // Visualize newlines
         .replace(/ /g, "·"); // Visualize spaces
 }
 
