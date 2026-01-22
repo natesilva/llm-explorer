@@ -20,3 +20,12 @@ class TokenInfo(BaseModel):
 
 class GenerationResponse(BaseModel):
     candidates: List[TokenInfo]
+
+
+class SwitchModelRequest(BaseModel):
+    filename: str
+
+
+class DownloadModelRequest(BaseModel):
+    repo_id: str
+    filename: str
