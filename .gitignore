@@ -10,4 +10,4 @@ __pycache__/
 app/models/
 
 # Other files to ignore
-.DS_Store
+**/.DS_Store
