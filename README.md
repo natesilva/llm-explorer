@@ -5,6 +5,10 @@ Interactive UI for exploring next-token probabilities from local GGUF models via
 **Inspiration:** https://www.youtube.com/watch?v=vrO8tZ0hHGk  
 Vibe-coded using OpenCode, Gemini 3 Pro, and MiniMax M2.1.
 
+## Screenshot
+
+![App Screenshot](./docs/screenshots/app.webp)
+
 ## Features
 
 - Next-token probability explorer with color-coded confidence
