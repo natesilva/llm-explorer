@@ -117,11 +117,31 @@ textarea {
     background-color: var(--accent);
 }
 
+.candidate-item.flash {
+    animation: tokenFlash 0.15s ease-out;
+}
+
+@keyframes tokenFlash {
+    0% { background-color: var(--highlight); }
+    100% { background-color: var(--item-bg); }
+}
+
 .prob-text {
     font-size: 0.8rem;
     color: var(--secondary-text);
     width: 50px;
     text-align: right;
+}
+
+.panel-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.panel-title-row h2 {
+    margin: 0;
 }
 
 footer {
@@ -423,6 +443,35 @@ footer {
     display: flex;
     align-items: center;
     gap: 1rem;
+}
+
+.starter-dropdown {
+    padding: 0.4rem 0.8rem;
+    background: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.starter-dropdown:hover {
+    background: var(--item-bg);
+}
+
+.starter-dropdown:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.context-controls {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.context-controls .starter-dropdown {
+    flex: 1;
 }
 
 .search-box {

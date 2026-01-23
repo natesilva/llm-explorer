@@ -20,11 +20,27 @@
         <main>
             <div class="panel left">
                 <h2>Context</h2>
+                <div class="context-controls">
+                    <select id="starter-select" class="starter-dropdown">
+                        <option value="" disabled selected>Starter texts</option>
+                        <option value="Once upon a time, there was a">Once upon a time...</option>
+                        <option value="In a world where">In a world where...</option>
+                        <option value="The answer is">The answer is...</option>
+                        <option value="Here's how it works:">Here's how it works...</option>
+                        <option value="function">function</option>
+                        <option value="Dear">Dear...</option>
+                        <option value="The problem is that">The problem is that...</option>
+                    </select>
+                    <button id="clear-context" class="icon-btn" title="Clear context">✕</button>
+                </div>
                 <textarea id="context-window" placeholder="Type here or select a prompt..."></textarea>
             </div>
             
             <div class="panel right">
-                <h2>Next Token Probability</h2>
+                <div class="panel-title-row">
+                    <h2>Next Token Probability</h2>
+                    <button id="auto-infer" class="icon-btn" title="Auto-inference">▶</button>
+                </div>
                 <div id="candidates-list">
                     <!-- Items injected here -->
                 </div>

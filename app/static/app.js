@@ -5,9 +5,15 @@ const topkSlider = document.getElementById('topk-slider');
 const toppSlider = document.getElementById('topp-slider');
 const penaltySlider = document.getElementById('penalty-slider');
 const themeToggleBtn = document.getElementById('theme-toggle');
+const starterSelect = document.getElementById('starter-select');
+const clearContextBtn = document.getElementById('clear-context');
+const autoInferBtn = document.getElementById('auto-infer');
 
 // State
 let debounceTimer;
+let autoInferRunning = false;
+let isLoadingCandidates = false;
+let currentCandidates = [];
 
 // Theme switching
 function setTheme(theme) {
@@ -39,9 +45,89 @@ if (themeToggleBtn) {
     themeToggleBtn.addEventListener('click', toggleTheme);
 }
 
+// Starter text dropdown
+if (starterSelect) {
+    starterSelect.addEventListener('change', (e) => {
+        contextInput.value = e.target.value;
+        starterSelect.value = '';
+        fetchCandidates();
+        contextInput.focus();
+    });
+}
+
+// Clear context button
+if (clearContextBtn) {
+    clearContextBtn.addEventListener('click', () => {
+        contextInput.value = '';
+        fetchCandidates();
+        contextInput.focus();
+    });
+}
+
+// Auto-inference
+const TOP_TOKENS_PER_SECOND = 5;
+
+if (autoInferBtn) {
+    autoInferBtn.addEventListener('click', () => {
+        if (autoInferRunning) {
+            stopAutoInfer();
+        } else {
+            startAutoInfer();
+        }
+    });
+}
+
+function weightedRandom(candidates) {
+    const total = candidates.reduce((sum, c) => sum + c.prob, 0);
+    let rand = Math.random() * total;
+    for (const c of candidates) {
+        rand -= c.prob;
+        if (rand <= 0) return c;
+    }
+    return candidates[candidates.length - 1];
+}
+
+function flashSelectedToken(token) {
+    const items = candidatesList.querySelectorAll('.candidate-item');
+    for (const item of items) {
+        if (item.dataset.token === token) {
+            item.classList.add('selected', 'flash');
+            setTimeout(() => {
+                item.classList.remove('selected', 'flash');
+            }, 150);
+            break;
+        }
+    }
+}
+
+function startAutoInfer() {
+    autoInferRunning = true;
+    autoInferBtn.textContent = '■';
+    autoInferBtn.title = 'Stop auto-inference';
+    autoInferInterval = setInterval(() => {
+        if (isLoadingCandidates) return;
+        if (!currentCandidates.length) {
+            fetchCandidates();
+            return;
+        }
+        const selected = weightedRandom(currentCandidates.filter(c => !c.excluded));
+        flashSelectedToken(selected.token);
+        setTimeout(() => selectToken(selected.token), 150);
+    }, 1000 / TOP_TOKENS_PER_SECOND);
+}
+
+function stopAutoInfer() {
+    autoInferRunning = false;
+    autoInferBtn.textContent = '▶';
+    autoInferBtn.title = 'Auto-inference';
+    clearInterval(autoInferInterval);
+    autoInferInterval = null;
+}
+
 async function fetchCandidates() {
     const text = contextInput.value;
     if (!text) return;
+    isLoadingCandidates = true;
 
     try {
         const response = await fetch('/next-tokens', {
@@ -55,13 +141,15 @@ async function fetchCandidates() {
                 repeat_penalty: parseFloat(penaltySlider.value)
             })
         });
-        
+
         if (!response.ok) throw new Error("API Error");
-        
+
         const data = await response.json();
         renderCandidates(data.candidates);
     } catch (e) {
         console.error(e);
+    } finally {
+        isLoadingCandidates = false;
     }
 }
 
@@ -75,6 +163,7 @@ function getProbColor(prob) {
 
 function renderCandidates(candidates) {
     candidatesList.innerHTML = '';
+    currentCandidates = candidates;
 
     candidates.forEach(c => {
         const div = document.createElement('div');
@@ -93,6 +182,8 @@ function renderCandidates(candidates) {
             </div>
             <span class="prob-text">${c.prob.toFixed(1)}%</span>
         `;
+        div.dataset.token = c.token;
+        div.dataset.prob = c.prob;
         candidatesList.appendChild(div);
     });
 }
