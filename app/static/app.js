@@ -66,10 +66,11 @@ async function fetchCandidates() {
 }
 
 function getProbColor(prob) {
-    const hue = Math.max(0, 120 - (prob * 1.2));
-    const saturation = 70 + Math.min(prob * 0.5, 20);
-    const lightness = 50 + Math.min(prob * 0.2, 10);
-    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    const hue = 265 - (prob * 0.6);
+    const sat = isLight ? 20 + prob * 0.6 : 35 + prob * 0.5;
+    const light = isLight ? 52 - prob * 0.2 : 52 - prob * 0.15;
+    return `hsl(${hue}, ${sat}%, ${light}%)`;
 }
 
 function renderCandidates(candidates) {
@@ -189,8 +190,8 @@ if (modelSelectorBtn) {
 // Tabs
 tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-        tabBtns.forEach(b => b.classList.remove('active'));
-        tabContents.forEach(c => c.classList.remove('active'));
+        tabBtns.forEach(b => { b.classList.remove('active'); });
+        tabContents.forEach(c => { c.classList.remove('active'); });
         btn.classList.add('active');
         document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
     });
