@@ -21,16 +21,25 @@
             <div class="panel left">
                 <h2>Context</h2>
                 <div class="context-controls">
-                    <select id="starter-select" class="starter-dropdown">
-                        <option value="" disabled selected>Starter texts</option>
-                        <option value="Once upon a time, there was a">Once upon a time...</option>
-                        <option value="In a world where">In a world where...</option>
-                        <option value="The answer is">The answer is...</option>
-                        <option value="Here's how it works:">Here's how it works...</option>
-                        <option value="function">function</option>
-                        <option value="Dear">Dear...</option>
-                        <option value="The problem is that">The problem is that...</option>
-                    </select>
+                <select id="starter-select" class="starter-dropdown">
+                    <option value="" disabled selected>Starter texts</option>
+                    <option value="Once upon a time, there was a">Fantasy: Once upon a time...</option>
+                    <option value="In a world where">Sci-Fi: In a world where...</option>
+                    <option value="The answer is">Q&A: The answer is...</option>
+                    <option value="Here's how it works:">Tutorial: Here's how it works...</option>
+                    <option value="The problem with">Essay: The problem with...</option>
+                    <option value="I believe that">Essay: I believe that...</option>
+                    <option value="In conclusion,">Essay: In conclusion...</option>
+                    <option value="function">Code: function</option>
+                    <option value="class">Code: class</option>
+                    <option value="import ">Code: import</option>
+                    <option value="Dear">Email: Dear...</option>
+                    <option value="To whom it may concern,">Email: To whom it may concern...</option>
+                    <option value="## ">Markdown: ##</option>
+                    <option value="- ">Markdown: -</option>
+                    <option value="#!/usr/bin/env python3">Shebang: python</option>
+                    <option value="SELECT * FROM">SQL: SELECT * FROM</option>
+                </select>
                     <button id="clear-context" class="icon-btn" title="Clear context">✕</button>
                 </div>
                 <textarea id="context-window" placeholder="Type here or select a prompt..."></textarea>
