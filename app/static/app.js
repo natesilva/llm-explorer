@@ -65,9 +65,16 @@ async function fetchCandidates() {
     }
 }
 
+function getProbColor(prob) {
+    const hue = Math.max(0, 120 - (prob * 1.2));
+    const saturation = 70 + Math.min(prob * 0.5, 20);
+    const lightness = 50 + Math.min(prob * 0.2, 10);
+    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+}
+
 function renderCandidates(candidates) {
     candidatesList.innerHTML = '';
-    
+
     candidates.forEach(c => {
         const div = document.createElement('div');
         div.className = 'candidate-item';
@@ -75,11 +82,13 @@ function renderCandidates(candidates) {
             div.classList.add('excluded');
         }
         div.onclick = () => selectToken(c.token);
-        
+
+        const barColor = getProbColor(c.prob);
+
         div.innerHTML = `
             <span class="token-text">${escapeHtml(c.token)}</span>
             <div class="prob-bar-container">
-                <div class="prob-bar" style="width: ${c.prob}%"></div>
+                <div class="prob-bar" style="width: ${c.prob}%; background-color: ${barColor}"></div>
             </div>
             <span class="prob-text">${c.prob.toFixed(1)}%</span>
         `;
