@@ -4,9 +4,40 @@ const tempSlider = document.getElementById('temp-slider');
 const topkSlider = document.getElementById('topk-slider');
 const toppSlider = document.getElementById('topp-slider');
 const penaltySlider = document.getElementById('penalty-slider');
+const themeToggleBtn = document.getElementById('theme-toggle');
 
 // State
 let debounceTimer;
+
+// Theme switching
+function setTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    themeToggleBtn.textContent = theme === 'light' ? '☀️' : '🌙';
+    localStorage.setItem('theme', theme);
+}
+
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+        setTheme(savedTheme);
+    } else {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        setTheme(prefersDark ? 'dark' : 'light');
+    }
+}
+
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    setTheme(currentTheme === 'dark' ? 'light' : 'dark');
+}
+
+// Initialize theme on load
+initTheme();
+
+// Theme toggle event listener
+if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', toggleTheme);
+}
 
 async function fetchCandidates() {
     const text = contextInput.value;
