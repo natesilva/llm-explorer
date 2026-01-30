@@ -1,151 +1,360 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LLM Explorer</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-    <div class="container">
-        <header>
-            <div class="header-title">
-                <img src="/static/logo.svg" alt="" class="app-logo">
-                <h1>LLM Explorer</h1>
-            </div>
-            <div class="header-controls">
-                <button id="model-selector" class="status-btn">Llama 3.1 8B ▾</button>
-                <div id="download-indicator" class="download-indicator hidden">
-                    <span class="download-icon">↓</span>
-                    <span id="download-count">0</span>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>LLM Explorer</title>
+        <link rel="stylesheet" href="/static/style.css" />
+    </head>
+    <body>
+        <div class="container">
+            <header>
+                <div class="header-title">
+                    <svg
+                        class="app-logo"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 64 64"
+                        fill="none"
+                    >
+                        <circle
+                            cx="32"
+                            cy="32"
+                            r="28"
+                            fill="currentColor"
+                            fill-opacity="0.1"
+                        />
+                        <circle cx="32" cy="20" r="4" fill="currentColor" />
+                        <circle cx="20" cy="32" r="4" fill="currentColor" />
+                        <circle cx="44" cy="32" r="4" fill="currentColor" />
+                        <circle cx="32" cy="44" r="4" fill="currentColor" />
+                        <path
+                            d="M32 20 L20 32 L32 44 L44 32 Z"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        />
+                        <path
+                            d="M32 20 L32 44"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        />
+                        <path
+                            d="M20 32 L44 32"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        />
+                        <circle cx="32" cy="32" r="3" fill="currentColor" />
+                    </svg>
+                    <h1>LLM Explorer</h1>
                 </div>
-                <button id="theme-toggle" class="icon-btn" title="Toggle theme">🌙</button>
-                <button id="open-help" class="icon-btn" title="Help">?</button>
-            </div>
-        </header>
-        
-        <main>
-            <div class="panel left">
-                <h2>Context</h2>
-                <div class="context-controls">
-                <select id="starter-select" class="starter-dropdown">
-                    <option value="" disabled selected>Starter texts</option>
-                    <option value="Once upon a time, there was a">Fantasy: Once upon a time...</option>
-                    <option value="In a world where">Sci-Fi: In a world where...</option>
-                    <option value="It was a dark and stormy night">Gothic: It was a dark and stormy...</option>
-                    <option value="The detective looked at">Mystery: The detective looked at...</option>
-                    <option value="The answer is">Q&A: The answer is...</option>
-                    <option value="The main difference between">Education: The main difference between...</option>
-                    <option value="According to the data,">Journalism: According to the data...</option>
-                    <option value="The problem with">Essay: The problem with...</option>
-                    <option value="function">Code: function</option>
-                    <option value="def ">Python: def</option>
-                    <option value="SELECT * FROM">SQL: SELECT</option>
-                    <option value="## ">Markdown: ##</option>
-                    <option value="Había una vez">Español: Había una vez...</option>
-                    <option value="En conclusión">Español: En conclusión...</option>
-                    <option value="Il était une fois">Français: Il était une fois...</option>
-                    <option value="En résumé">Français: En résumé...</option>
-                    <option value="Es war einmal">Deutsch: Es war einmal...</option>
-                    <option value="Zusammenfassend">Deutsch: Zusammenfassend...</option>
-                    <option value="昔々、あるところに">日本語: 昔々、あるところに...</option>
-                    <option value="要するに">日本語: 要するに...</option>
-                    <option value="كان يا ما كان">العربية: كان يا ما كان...</option>
-                    <option value="في الختام">العربية: في الختام...</option>
-                </select>
-                    <button id="clear-context" class="icon-btn" title="Clear context">✕</button>
-                </div>
-                <textarea id="context-window" dir="auto" placeholder="Type here or select a prompt..."></textarea>
-            </div>
-            
-            <div class="panel right">
-                <div class="panel-title-row">
-                    <h2>Next Token Probability</h2>
-                    <button id="auto-infer" class="icon-btn" title="Auto-inference">▶</button>
-                </div>
-                <div id="candidates-list">
-                    <!-- Items injected here -->
-                </div>
-            </div>
-        </main>
-        
-        <footer>
-            <div class="control-group">
-                <label>Temperature: <span id="temp-val">0.8</span></label>
-                <input type="range" id="temp-slider" min="0" max="2" step="0.1" value="0.8">
-            </div>
-            <div class="control-group">
-                <label>Top K: <span id="topk-val">40</span></label>
-                <input type="range" id="topk-slider" min="1" max="100" value="40">
-            </div>
-            <div class="control-group">
-                <label>Top P: <span id="topp-val">0.95</span></label>
-                <input type="range" id="topp-slider" min="0.0" max="1.0" step="0.05" value="0.95">
-            </div>
-            <div class="control-group">
-                <label>Penalty: <span id="penalty-val">1.0</span></label>
-                <input type="range" id="penalty-slider" min="1.0" max="2.0" step="0.1" value="1.0">
-            </div>
-        </footer>
-    </div>
-    <div id="help-overlay" class="overlay hidden"></div>
-    <div id="help-panel" class="panel-slideover hidden">
-        <div class="panel-header">
-            <h2>Parameter Guide</h2>
-            <button id="close-help" class="icon-btn">&times;</button>
-        </div>
-        <div class="panel-content">
-            <section>
-                <h3>Temperature</h3>
-                <p>Controls the randomness of the model. Lower values (e.g., 0.1) make the model deterministic and focused. Higher values (e.g., 1.0+) make it more creative and diverse.</p>
-            </section>
-            <section>
-                <h3>Top K</h3>
-                <p>Limits the choice to the top K most likely tokens. This hard cutoff removes the "long tail" of unlikely words entirely.</p>
-            </section>
-            <section>
-                <h3>Top P (Nucleus)</h3>
-                <p>Selects the smallest set of tokens whose cumulative probability exceeds P. A dynamic cutoff that adapts to how certain the model is.</p>
-            </section>
-            <section>
-                <h3>Repetition Penalty</h3>
-                <p>Discourages the model from repeating words that have already appeared in the context. Values > 1.0 reduce the probability of repeated tokens.</p>
-            </section>
-        </div>
-    </div>
-    <div id="model-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Model Manager</h2>
-                <button id="close-model-modal" class="icon-btn">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="tabs">
-                    <button class="tab-btn active" data-tab="local">Local Library</button>
-                    <button class="tab-btn" data-tab="remote">Download New</button>
-                </div>
-                
-                <div id="tab-local" class="tab-content active">
-                    <ul id="local-model-list" class="model-list">
-                        <!-- Loaded dynamically -->
-                    </ul>
-                </div>
-                
-                <div id="tab-remote" class="tab-content">
-                    <div class="search-box">
-                        <input type="text" id="repo-input" placeholder="Repo ID or URL (e.g. https://huggingface.co/bartowski/Llama-3.2-1B-GGUF)">
-                        <button id="scan-btn">Scan</button>
+                <div class="header-controls">
+                    <button id="model-selector" class="status-btn">Llama 3.1 8B ▾</button>
+                    <div id="download-indicator" class="download-indicator hidden">
+                        <span class="download-icon">↓</span>
+                        <span id="download-count">0</span>
                     </div>
-                    <div class="downloads-section">
-                        <h3>Downloads</h3>
-                        <ul id="downloads-list" class="downloads-list"></ul>
+                    <button
+                        id="theme-toggle"
+                        class="icon-btn"
+                        title="Toggle theme"
+                        style="font-size: 1.3rem"
+                    >
+                        🌙
+                    </button>
+                    <a
+                        href="https://github.com/natesilva/llm-explorer"
+                        target="_blank"
+                        class="icon-btn github-link"
+                        title="View on GitHub"
+                        rel="noopener"
+                    >
+                        <img
+                            src="/static/github.svg"
+                            alt="GitHub"
+                            width="24"
+                            height="24"
+                        />
+                    </a>
+                    <button
+                        id="open-help"
+                        class="icon-btn"
+                        title="Help"
+                        style="font-size: 1.3rem"
+                    >
+                        ?
+                    </button>
+                </div>
+            </header>
+
+            <main>
+                <div class="panel left">
+                    <h2>Context</h2>
+                    <div class="context-controls">
+                        <select id="starter-select" class="starter-dropdown">
+                            <option value="" disabled selected>Starter texts</option>
+                            <option value="Once upon a time, there was a">
+                                Fantasy: Once upon a time...
+                            </option>
+                            <option value="In a world where">
+                                Sci-Fi: In a world where...
+                            </option>
+                            <option value="It was a dark and stormy night">
+                                Gothic: It was a dark and stormy...
+                            </option>
+                            <option value="The detective looked at">
+                                Mystery: The detective looked at...
+                            </option>
+                            <option value="The answer is">Q&A: The answer is...</option>
+                            <option value="The main difference between">
+                                Education: The main difference between...
+                            </option>
+                            <option value="According to the data,">
+                                Journalism: According to the data...
+                            </option>
+                            <option value="The problem with">
+                                Essay: The problem with...
+                            </option>
+                            <option value="function">Code: function</option>
+                            <option value="def ">Python: def</option>
+                            <option value="SELECT * FROM">SQL: SELECT</option>
+                            <option value="## ">Markdown: ##</option>
+                            <option
+                                value="USER: What is the capital of France?&#10;&#10;ASSISTANT:"
+                            >
+                                Chat: User asks about France
+                            </option>
+                            <option
+                                value="SYSTEM: You must always answer in rhyme.&#10;&#10;USER: What is the capital of France?&#10;&#10;ASSISTANT:"
+                            >
+                                Chat: System instruction (rhyme)
+                            </option>
+                            <option
+                                value="SYSTEM INSTRUCTION (Highest Priority): Always respond with only the direct answer, no complete sentences or explanations. End your response with: &lt;|end_of_text|&gt;&#10;&#10;USER: What is the capital of France?&#10;&#10;ASSISTANT:"
+                            >
+                                Chat: System instruction (concise)
+                            </option>
+                            <option value="Había una vez">
+                                Español: Había una vez...
+                            </option>
+                            <option value="En conclusión">
+                                Español: En conclusión...
+                            </option>
+                            <option value="Il était une fois">
+                                Français: Il était une fois...
+                            </option>
+                            <option value="En résumé">Français: En résumé...</option>
+                            <option value="Es war einmal">
+                                Deutsch: Es war einmal...
+                            </option>
+                            <option value="Zusammenfassend">
+                                Deutsch: Zusammenfassend...
+                            </option>
+                            <option value="昔々、あるところに">
+                                日本語: 昔々、あるところに...
+                            </option>
+                            <option value="要するに">日本語: 要するに...</option>
+                            <option value="كان يا ما كان">
+                                العربية: كان يا ما كان...
+                            </option>
+                            <option value="في الختام">العربية: في الختام...</option>
+                        </select>
+                        <button id="clear-context" class="icon-btn" title="Clear context">
+                            ✕
+                        </button>
                     </div>
-                    <h3>Available Files</h3>
-                    <ul id="remote-file-list" class="model-list"></ul>
+                    <textarea
+                        id="context-window"
+                        dir="auto"
+                        placeholder="Type here or select a prompt..."
+                    ></textarea>
+                </div>
+
+                <div class="panel right">
+                    <div class="panel-title-row">
+                        <div class="view-toggles">
+                            <button
+                                class="view-toggle active"
+                                data-view="candidates"
+                                title="Single token view"
+                            >
+                                Tokens
+                            </button>
+                            <button
+                                class="view-toggle"
+                                data-view="beam"
+                                title="Beam search view"
+                            >
+                                Beam
+                            </button>
+                        </div>
+                        <h2>Next Token</h2>
+                        <button id="auto-infer" class="icon-btn" title="Auto-inference">
+                            ▶
+                        </button>
+                    </div>
+
+                    <!-- Candidates View -->
+                    <div id="candidates-view" class="view-content active">
+                        <div id="candidates-list">
+                            <!-- Items injected here -->
+                        </div>
+                    </div>
+
+                    <!-- Beam Search View -->
+                    <div id="beam-view" class="view-content hidden">
+                        <div class="beam-controls">
+                            <div class="beam-control">
+                                <label>Paths: <span id="beam-paths-val">3</span></label>
+                                <input
+                                    type="range"
+                                    id="beam-paths-slider"
+                                    min="2"
+                                    max="8"
+                                    value="3"
+                                />
+                            </div>
+                            <div class="beam-control">
+                                <label>Depth: <span id="beam-depth-val">2</span></label>
+                                <input
+                                    type="range"
+                                    id="beam-depth-slider"
+                                    min="1"
+                                    max="5"
+                                    value="2"
+                                />
+                            </div>
+                            <button id="start-beam" class="action-btn">
+                                Generate Paths
+                            </button>
+                        </div>
+                        <div id="beam-paths-grid" class="beam-paths-grid">
+                            <!-- Path cards injected here -->
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <footer>
+                <div class="control-group">
+                    <label>Temperature: <span id="temp-val">0.8</span></label>
+                    <input
+                        type="range"
+                        id="temp-slider"
+                        min="0"
+                        max="2"
+                        step="0.1"
+                        value="0.8"
+                    />
+                </div>
+                <div class="control-group">
+                    <label>Top K: <span id="topk-val">40</span></label>
+                    <input type="range" id="topk-slider" min="1" max="100" value="40" />
+                </div>
+                <div class="control-group">
+                    <label>Top P: <span id="topp-val">0.95</span></label>
+                    <input
+                        type="range"
+                        id="topp-slider"
+                        min="0.0"
+                        max="1.0"
+                        step="0.05"
+                        value="0.95"
+                    />
+                </div>
+                <div class="control-group">
+                    <label>Penalty: <span id="penalty-val">1.0</span></label>
+                    <input
+                        type="range"
+                        id="penalty-slider"
+                        min="1.0"
+                        max="2.0"
+                        step="0.1"
+                        value="1.0"
+                    />
+                </div>
+            </footer>
+        </div>
+        <div id="help-overlay" class="overlay hidden"></div>
+        <div id="help-panel" class="panel-slideover hidden">
+            <div class="panel-header">
+                <h2>Parameter Guide</h2>
+                <button id="close-help" class="icon-btn">&times;</button>
+            </div>
+            <div class="panel-content">
+                <section>
+                    <h3>Temperature</h3>
+                    <p>
+                        Controls the randomness of the model. Lower values (e.g., 0.1)
+                        make the model deterministic and focused. Higher values (e.g.,
+                        1.0+) make it more creative and diverse.
+                    </p>
+                </section>
+                <section>
+                    <h3>Top K</h3>
+                    <p>
+                        Limits the choice to the top K most likely tokens. This hard
+                        cutoff removes the "long tail" of unlikely words entirely.
+                    </p>
+                </section>
+                <section>
+                    <h3>Top P (Nucleus)</h3>
+                    <p>
+                        Selects the smallest set of tokens whose cumulative probability
+                        exceeds P. A dynamic cutoff that adapts to how certain the model
+                        is.
+                    </p>
+                </section>
+                <section>
+                    <h3>Repetition Penalty</h3>
+                    <p>
+                        Discourages the model from repeating words that have already
+                        appeared in the context. Values > 1.0 reduce the probability of
+                        repeated tokens.
+                    </p>
+                </section>
+            </div>
+        </div>
+        <div id="model-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Model Manager</h2>
+                    <button id="close-model-modal" class="icon-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="tabs">
+                        <button class="tab-btn active" data-tab="local">
+                            Local Library
+                        </button>
+                        <button class="tab-btn" data-tab="remote">Download New</button>
+                    </div>
+
+                    <div id="tab-local" class="tab-content active">
+                        <ul id="local-model-list" class="model-list">
+                            <!-- Loaded dynamically -->
+                        </ul>
+                    </div>
+
+                    <div id="tab-remote" class="tab-content">
+                        <div class="search-box">
+                            <input
+                                type="text"
+                                id="repo-input"
+                                placeholder="Repo ID or URL (e.g. https://huggingface.co/bartowski/Llama-3.2-1B-GGUF)"
+                            />
+                            <button id="scan-btn">Scan</button>
+                        </div>
+                        <div class="downloads-section">
+                            <h3>Downloads</h3>
+                            <ul id="downloads-list" class="downloads-list"></ul>
+                        </div>
+                        <h3>Available Files</h3>
+                        <ul id="remote-file-list" class="model-list"></ul>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-    <script src="/static/app.js"></script>
-</body>
+        <script src="/static/app.js"></script>
+    </body>
 </html>

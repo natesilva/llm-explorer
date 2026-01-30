@@ -22,6 +22,28 @@ class GenerationResponse(BaseModel):
     candidates: List[TokenInfo]
 
 
+class BeamPathToken(BaseModel):
+    token: str
+    prob: float
+
+
+class BeamPath(BaseModel):
+    id: str
+    text: str
+    tokens: List[BeamPathToken]
+    cumulative_prob: float  # Product of all token probabilities
+
+
+class BeamSearchRequest(BaseModel):
+    context: str
+    num_paths: int = 3  # Number of paths to generate
+    depth: int = 1  # Initial depth (tokens per path)
+
+
+class BeamSearchResponse(BaseModel):
+    paths: List[BeamPath]
+
+
 class SwitchModelRequest(BaseModel):
     filename: str
 

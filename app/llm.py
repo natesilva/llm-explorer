@@ -2,6 +2,8 @@ from llama_cpp import Llama
 from app.utils import get_model_path
 import math
 import threading
+import uuid
+import random
 
 
 class LLMEngine:
@@ -131,3 +133,95 @@ class LLMEngine:
                 cutoff_reached = True
 
         return candidates
+
+    def generate_beam_paths(
+        self,
+        context: str,
+        num_paths: int = 3,
+        depth: int = 1,
+        temp: float = 0.8,
+        top_k: int = 40,
+        top_p: float = 0.95,
+        repeat_penalty: float = 1.0,
+    ) -> list:
+        """
+        Generate multiple divergent paths from the given context.
+        Each path samples a different token from the top candidates.
+        Returns a list of path dictionaries with id, text, tokens, and cumulative_prob.
+        """
+        # Get top candidates for the current context
+        candidates = self.get_next_tokens(
+            context,
+            temp=temp,
+            top_k=top_k,
+            top_p=top_p,
+            repeat_penalty=repeat_penalty,
+        )
+
+        # Filter to only non-excluded candidates
+        valid_candidates = [c for c in candidates if not c.get("excluded", False)]
+
+        # Select diverse tokens from the top candidates
+        # We want num_paths distinct starting points
+        selected_indices = []
+        if len(valid_candidates) <= num_paths:
+            selected_indices = list(range(len(valid_candidates)))
+        else:
+            # Use a mix of top tokens and some sampling for diversity
+            # Always include the top token, then sample from the rest
+            selected_indices = [0]
+            remaining = list(range(1, len(valid_candidates)))
+            # Sample with probability proportional to rank (higher rank = more likely)
+            weights = [1.0 / (i + 1) for i in range(len(remaining))]
+            weights = [w / sum(weights) for w in weights]
+            selected_indices.extend(random.choices(
+                remaining,
+                weights=weights,
+                k=min(num_paths - 1, len(remaining))
+            ))
+
+        paths = []
+        for idx in selected_indices[:num_paths]:
+            candidate = valid_candidates[idx]
+            token_text = candidate["token"]
+            token_prob = candidate["prob"] / 100.0  # Convert back from percentage
+
+            # Build the path
+            new_text = context + token_text
+            path_tokens = [{"token": token_text, "prob": token_prob}]
+
+            # Extend the path to the requested depth
+            current_text = new_text
+            for _ in range(depth - 1):
+                next_candidates = self.get_next_tokens(
+                    current_text,
+                    temp=temp,
+                    top_k=top_k,
+                    top_p=top_p,
+                    repeat_penalty=repeat_penalty,
+                )
+                valid_next = [c for c in next_candidates if not c.get("excluded", False)]
+                if valid_next:
+                    # Pick the top token for extending
+                    next_token = valid_next[0]
+                    next_prob = next_token["prob"] / 100.0
+                    path_tokens.append({"token": next_token["token"], "prob": next_prob})
+                    current_text += next_token["token"]
+                else:
+                    break
+
+            # Calculate cumulative probability (product of all token probs)
+            cumulative_prob = 1.0
+            for t in path_tokens:
+                cumulative_prob *= t["prob"]
+
+            paths.append({
+                "id": str(uuid.uuid4()),
+                "text": current_text,
+                "tokens": path_tokens,
+                "cumulative_prob": cumulative_prob,
+            })
+
+        # Sort by cumulative probability (most promising first)
+        paths.sort(key=lambda p: p["cumulative_prob"], reverse=True)
+        return paths

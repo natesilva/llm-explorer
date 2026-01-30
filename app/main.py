@@ -7,6 +7,8 @@ from app.schemas import (
     SwitchModelRequest,
     DownloadModelRequest,
     DownloadsStatusResponse,
+    BeamSearchRequest,
+    BeamSearchResponse,
 )
 from app.llm import LLMEngine
 from app.models_manager import ModelManager, MODEL_DIR
@@ -41,6 +43,21 @@ def get_next_tokens(request: GenerationRequest):
             repeat_penalty=request.repeat_penalty,
         )
         return {"candidates": candidates}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/beam/search", response_model=BeamSearchResponse)
+def beam_search(request: BeamSearchRequest):
+    """Generate multiple divergent text paths using beam search."""
+    engine = LLMEngine()
+    try:
+        paths = engine.generate_beam_paths(
+            context=request.context,
+            num_paths=request.num_paths,
+            depth=request.depth,
+        )
+        return {"paths": paths}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
