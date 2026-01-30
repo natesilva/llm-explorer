@@ -15,6 +15,10 @@ let autoInferRunning = false;
 let isLoadingCandidates = false;
 let currentCandidates = [];
 
+// Downloads state
+let downloads = {};
+let downloadPollInterval = null;
+
 // Theme switching
 function setTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
@@ -226,6 +230,228 @@ contextInput.addEventListener('input', () => {
 // Initial load
 contextInput.value = "Once upon a time, there was a";
 fetchCandidates();
+startDownloadPolling(); // Check for any existing downloads on load
+
+// Make download indicator clickable to open model modal
+const downloadIndicator = document.getElementById('download-indicator');
+if (downloadIndicator) {
+    downloadIndicator.addEventListener('click', () => {
+        toggleModelModal(true);
+        // Switch to the download tab
+        const remoteTab = document.querySelector('.tab-btn[data-tab="remote"]');
+        if (remoteTab) remoteTab.click();
+    });
+}
+
+// Downloads functionality
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+function parseRepoInput(input) {
+    input = input.trim();
+    // Check if it's a URL
+    if (input.startsWith('http')) {
+        try {
+            const url = new URL(input);
+            if (url.hostname === 'huggingface.co') {
+                const parts = url.pathname.split('/').filter(Boolean);
+                if (parts.length >= 2) {
+                    return `${parts[0]}/${parts[1]}`;
+                }
+            }
+        } catch (e) {
+            // Not a valid URL, treat as repo_id
+        }
+    }
+    return input;
+}
+
+async function startDownloadPolling() {
+    if (downloadPollInterval) return;
+
+    await updateDownloadsStatus();
+
+    downloadPollInterval = setInterval(async () => {
+        const hasActive = await updateDownloadsStatus();
+        if (!hasActive) {
+            clearInterval(downloadPollInterval);
+            downloadPollInterval = null;
+        }
+    }, 1500);
+}
+
+async function updateDownloadsStatus() {
+    try {
+        const res = await fetch('/downloads/status');
+        const data = await res.json();
+
+        downloads = {};
+        data.downloads.forEach(d => {
+            downloads[d.download_id] = d;
+        });
+
+        renderDownloads();
+        updateDownloadIndicator(data.active_count);
+
+        return data.active_count > 0;
+    } catch (e) {
+        console.error('Failed to fetch download status:', e);
+        return false;
+    }
+}
+
+function updateDownloadIndicator(activeCount) {
+    const indicator = document.getElementById('download-indicator');
+    const countSpan = document.getElementById('download-count');
+
+    if (activeCount > 0) {
+        indicator.classList.remove('hidden');
+        indicator.classList.add('active');
+        countSpan.textContent = activeCount;
+    } else {
+        indicator.classList.remove('active');
+        // Keep showing if there are recent completed downloads
+        const hasRecentCompleted = Object.values(downloads).some(
+            d => d.state === 'completed' && !d.notified
+        );
+        if (!hasRecentCompleted) {
+            indicator.classList.add('hidden');
+        } else {
+            countSpan.textContent = '✓';
+        }
+    }
+}
+
+function renderDownloads() {
+    const downloadsList = document.getElementById('downloads-list');
+    if (!downloadsList) return;
+
+    // Sort by state (in_progress first), then by time
+    const sortedDownloads = Object.values(downloads).sort((a, b) => {
+        const stateOrder = { in_progress: 0, pending: 1, completed: 2, failed: 3, cancelled: 4 };
+        return stateOrder[a.state] - stateOrder[b.state] ||
+              new Date(b.started_at) - new Date(a.started_at);
+    });
+
+    downloadsList.innerHTML = '';
+
+    for (const download of sortedDownloads) {
+        const li = document.createElement('li');
+        li.className = 'download-item';
+
+        const stateClass = download.state;
+        const stateLabel = download.state.replace('_', ' ');
+
+        let progressHtml = '';
+        if (download.state === 'in_progress' || download.state === 'pending') {
+            const pct = download.progress || 0;
+            progressHtml = `
+                <div class="download-progress-bar">
+                    <div class="download-progress-fill" style="width: ${pct}%"></div>
+                </div>
+            `;
+        }
+
+        let actionsHtml = '';
+        if (download.state === 'in_progress' || download.state === 'pending') {
+            actionsHtml = `
+                <div class="download-item-actions">
+                    <button class="download-cancel-btn" onclick="cancelDownload('${download.download_id}')">Cancel</button>
+                </div>
+            `;
+        }
+
+        let infoHtml = '';
+        if (download.total_bytes > 0) {
+            infoHtml = `
+                <div class="download-item-info">
+                    <span>${formatBytes(download.bytes_downloaded)} / ${formatBytes(download.total_bytes)}</span>
+                    <span>${download.progress.toFixed(1)}%</span>
+                </div>
+            `;
+        } else if (download.state === 'failed') {
+            infoHtml = `
+                <div class="download-item-info">
+                    <span style="color: #f44336;">${download.error_message || 'Download failed'}</span>
+                </div>
+            `;
+        } else if (download.state === 'completed') {
+            infoHtml = `
+                <div class="download-item-info">
+                    <span style="color: #4caf50;">Complete - ${formatBytes(download.bytes_downloaded)}</span>
+                </div>
+            `;
+        }
+
+        li.innerHTML = `
+            <div class="download-item-header">
+                <span class="download-item-filename" title="${download.filename}">${download.filename}</span>
+                <span class="download-item-status ${stateClass}">${stateLabel}</span>
+            </div>
+            ${progressHtml}
+            ${infoHtml}
+            ${actionsHtml}
+        `;
+
+        downloadsList.appendChild(li);
+
+        // Notify on complete
+        if (download.state === 'completed' && !download.notified) {
+            download.notified = true;
+            showNotification(`Download complete: ${download.filename}`);
+            // Refresh local models
+            loadLocalModels();
+        }
+    }
+}
+
+function showNotification(message) {
+    // Simple notification using a temporary element
+    const existing = document.getElementById('notification-toast');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'notification-toast';
+    toast.className = 'notification-toast';
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: var(--accent);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 1000;
+        animation: slideIn 0.3s ease;
+    `;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+}
+
+// Add CSS for toast animations
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+`;
+document.head.appendChild(style);
 
 // Help Panel Logic
 const helpOverlay = document.getElementById('help-overlay');
@@ -260,22 +486,49 @@ const localModelList = document.getElementById('local-model-list');
 const remoteFileList = document.getElementById('remote-file-list');
 const repoInput = document.getElementById('repo-input');
 const scanBtn = document.getElementById('scan-btn');
-const dlStatus = document.getElementById('dl-status');
-const dlProgress = document.getElementById('download-progress');
 
 // Toggle Modal
 function toggleModelModal(show) {
     if (show) {
         modelModal.classList.remove('hidden');
         loadLocalModels();
+        updateDownloadsStatus(); // Load current download status
     } else {
         modelModal.classList.add('hidden');
+    }
+}
+
+// Initialize model selector button with current model's friendly name
+async function initModelSelector() {
+    try {
+        const res = await fetch('/models');
+        const models = await res.json();
+        // Get the currently loaded model from LLM engine
+        const currentRes = await fetch('/models/current');
+        if (currentRes.ok) {
+            const currentData = await currentRes.json();
+            if (currentData.model) {
+                const currentModel = models.find(m => m.filename === currentData.model);
+                const displayName = currentModel?.friendly_name || currentData.model;
+                modelSelectorBtn.textContent = displayName + " ▾";
+                return;
+            }
+        }
+        // Fallback: use first model or default text
+        if (models.length > 0) {
+            const displayName = models[0].friendly_name || models[0].filename;
+            modelSelectorBtn.textContent = displayName + " ▾";
+        }
+    } catch (e) {
+        // Keep default text from HTML
     }
 }
 
 if (modelSelectorBtn) {
     modelSelectorBtn.addEventListener('click', () => toggleModelModal(true));
     closeModelModalBtn.addEventListener('click', () => toggleModelModal(false));
+    // Initialize on page load
+    initModelSelector();
 }
 
 // Tabs
@@ -297,9 +550,13 @@ async function loadLocalModels() {
         localModelList.innerHTML = '';
         models.forEach(m => {
             const li = document.createElement('li');
+            // Use friendly_name if available, otherwise fall back to filename
+            const displayName = m.friendly_name || m.filename;
+            const showFilename = m.friendly_name && m.friendly_name !== m.filename;
             li.innerHTML = `
                 <div class="model-info">
-                    <strong>${m.filename}</strong>
+                    <strong>${escapeHtml(displayName)}</strong>
+                    ${showFilename ? `<small class="model-filename">${escapeHtml(m.filename)}</small>` : ''}
                     <small>${m.size_mb} MB</small>
                 </div>
                 <button class="action-btn" onclick="switchModel('${m.filename}')">Load</button>
@@ -313,7 +570,29 @@ async function loadLocalModels() {
 
 async function switchModel(filename) {
     modelSelectorBtn.textContent = "Loading...";
+    modelSelectorBtn.disabled = true;
     toggleModelModal(false);
+
+    // Disable and show loading state in candidates section
+    candidatesList.classList.add('loading');
+    candidatesList.innerHTML = '<li class="loading-message">Loading model...</li>';
+
+    // Disable context input and controls
+    const controlsToDisable = [
+        contextInput,
+        tempSlider,
+        topkSlider,
+        toppSlider,
+        penaltySlider,
+        autoInferBtn,
+    ];
+    controlsToDisable.forEach(el => {
+        if (el) {
+            el.disabled = true;
+            el.classList.add('disabled');
+        }
+    });
+
     try {
         const res = await fetch('/models/switch', {
             method: 'POST',
@@ -322,33 +601,54 @@ async function switchModel(filename) {
         });
         if (!res.ok) throw new Error("Failed to switch");
         const data = await res.json();
-        modelSelectorBtn.textContent = data.model + " ▾";
-        alert("Model switched successfully!");
+
+        // Use friendly_name if available, otherwise filename
+        const displayName = data.friendly_name || data.model || filename;
+        modelSelectorBtn.textContent = displayName + " ▾";
+
+        // Refresh models list to get updated metadata
+        await loadLocalModels();
+
+        // Refresh candidates with the newly loaded model
+        await fetchCandidates();
     } catch (e) {
         alert("Error switching model: " + e);
         modelSelectorBtn.textContent = "Error ▾";
+        candidatesList.innerHTML = '<li class="error-message">Failed to load model</li>';
+    } finally {
+        candidatesList.classList.remove('loading');
+        // Re-enable controls
+        modelSelectorBtn.disabled = false;
+        controlsToDisable.forEach(el => {
+            if (el) {
+                el.disabled = false;
+                el.classList.remove('disabled');
+            }
+        });
     }
 }
 
 // Scan Remote
 if (scanBtn) {
     scanBtn.addEventListener('click', async () => {
-        const repo = repoInput.value.trim();
-        if (!repo) return;
-        
+        const input = repoInput.value.trim();
+        if (!input) return;
+
+        const repo = parseRepoInput(input);
+
         remoteFileList.innerHTML = '<li>Scanning...</li>';
         try {
             const res = await fetch(`/models/lookup?repo_id=${encodeURIComponent(repo)}`);
             const files = await res.json();
-            
+
             if (files.error) throw new Error(files.error);
-            
+
             remoteFileList.innerHTML = '';
             if (files.length === 0) {
                 remoteFileList.innerHTML = '<li>No GGUF files found.</li>';
                 return;
             }
-            
+
             files.forEach(f => {
                 const li = document.createElement('li');
                 li.innerHTML = `
@@ -368,11 +668,6 @@ if (scanBtn) {
 
 // Download
 window.downloadModel = async (repo, filename) => {
-    if (!confirm(`Download ${filename}? This may take a while.`)) return;
-    
-    dlProgress.classList.remove('hidden');
-    dlStatus.textContent = "Starting...";
-    
     try {
         const res = await fetch('/models/download', {
             method: 'POST',
@@ -380,15 +675,28 @@ window.downloadModel = async (repo, filename) => {
             body: JSON.stringify({repo_id: repo, filename})
         });
         const data = await res.json();
-        if (data.status === 'success') {
-            dlStatus.textContent = "Done!";
-            alert("Download complete!");
-            loadLocalModels(); // Refresh list
-        } else {
-            throw new Error("Download failed");
+
+        if (data.download_id) {
+            // Download started in background
+            startDownloadPolling();
         }
     } catch (e) {
-        dlStatus.textContent = "Error: " + e;
+        console.error('Failed to start download:', e);
+        showNotification('Failed to start download');
+    }
+};
+
+// Cancel download
+window.cancelDownload = async (downloadId) => {
+    try {
+        const res = await fetch(`/downloads/${downloadId}`, {
+            method: 'DELETE'
+        });
+        if (res.ok) {
+            showNotification('Download cancelled');
+        }
+    } catch (e) {
+        console.error('Failed to cancel download:', e);
     }
 };
 

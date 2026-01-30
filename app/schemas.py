@@ -29,3 +29,27 @@ class SwitchModelRequest(BaseModel):
 class DownloadModelRequest(BaseModel):
     repo_id: str
     filename: str
+
+
+class DownloadStartResponse(BaseModel):
+    download_id: str
+    status: str
+
+
+class DownloadStatusInfo(BaseModel):
+    download_id: str
+    repo_id: str
+    filename: str
+    state: str
+    progress: float
+    bytes_downloaded: int
+    total_bytes: int
+    error_message: str
+    started_at: Optional[str] = None
+    completed_at: Optional[str] = None
+    target_path: Optional[str] = None
+
+
+class DownloadsStatusResponse(BaseModel):
+    downloads: List[DownloadStatusInfo]
+    active_count: int

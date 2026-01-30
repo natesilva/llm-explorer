@@ -9,9 +9,16 @@
 <body>
     <div class="container">
         <header>
-            <h1>LLM Explorer</h1>
+            <div class="header-title">
+                <img src="/static/logo.svg" alt="" class="app-logo">
+                <h1>LLM Explorer</h1>
+            </div>
             <div class="header-controls">
                 <button id="model-selector" class="status-btn">Llama 3.1 8B ▾</button>
+                <div id="download-indicator" class="download-indicator hidden">
+                    <span class="download-icon">↓</span>
+                    <span id="download-count">0</span>
+                </div>
                 <button id="theme-toggle" class="icon-btn" title="Toggle theme">🌙</button>
                 <button id="open-help" class="icon-btn" title="Help">?</button>
             </div>
@@ -126,13 +133,15 @@
                 
                 <div id="tab-remote" class="tab-content">
                     <div class="search-box">
-                        <input type="text" id="repo-input" placeholder="Repo ID (e.g. bartowski/Llama-3.2-1B-Instruct-GGUF)">
+                        <input type="text" id="repo-input" placeholder="Repo ID or URL (e.g. https://huggingface.co/bartowski/Llama-3.2-1B-GGUF)">
                         <button id="scan-btn">Scan</button>
                     </div>
-                    <ul id="remote-file-list" class="model-list"></ul>
-                    <div id="download-progress" class="hidden">
-                        <p>Downloading... <span id="dl-status"></span></p>
+                    <div class="downloads-section">
+                        <h3>Downloads</h3>
+                        <ul id="downloads-list" class="downloads-list"></ul>
                     </div>
+                    <h3>Available Files</h3>
+                    <ul id="remote-file-list" class="model-list"></ul>
                 </div>
             </div>
         </div>

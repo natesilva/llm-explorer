@@ -32,6 +32,9 @@ class LLMEngine:
 
             gc.collect()
 
+        # Store the current model path
+        self.current_model_path = model_path
+
         # n_gpu_layers=-1 for full Metal offload
         self.model = Llama(
             model_path=model_path,
@@ -41,6 +44,10 @@ class LLMEngine:
             logits_all=True,
         )
         print(f"Model loaded: {model_path}")
+
+    def get_current_model(self) -> str:
+        """Return the path to the currently loaded model."""
+        return getattr(self, "current_model_path", None)
 
     def get_next_tokens(
         self,

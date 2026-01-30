@@ -51,6 +51,23 @@ header {
     border-bottom: 1px solid var(--border-color);
 }
 
+.header-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.app-logo {
+    width: 28px;
+    height: 28px;
+    color: var(--highlight);
+}
+
+header h1 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
 main {
     display: flex;
     flex: 1;
@@ -77,9 +94,40 @@ textarea {
     font-family: monospace;
 }
 
+textarea:disabled,
+input[type="range"]:disabled,
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+textarea.disabled,
+input[type="range"].disabled,
+button.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
 #candidates-list {
     overflow-y: auto;
     flex: 1;
+}
+
+#candidates-list.loading {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+#candidates-list .loading-message,
+#candidates-list .error-message {
+    padding: 1rem;
+    text-align: center;
+    color: var(--secondary-text);
+    font-style: italic;
+}
+
+#candidates-list .error-message {
+    color: #f44336;
 }
 
 .candidate-item {
@@ -142,6 +190,11 @@ textarea {
 
 .panel-title-row h2 {
     margin: 0;
+}
+
+/* Ensure h2 in panels have consistent spacing */
+.panel h2 {
+    margin: 0 0 1rem 0;
 }
 
 footer {
@@ -414,6 +467,11 @@ footer {
 .model-info small {
     color: var(--secondary-text);
 }
+.model-filename {
+    font-family: monospace;
+    font-size: 0.8em !important;
+    opacity: 0.8;
+}
 
 .action-btn {
     background: var(--accent);
@@ -437,6 +495,10 @@ footer {
     font-size: 1rem;
 }
 .status-btn:hover { background: var(--item-bg); }
+.status-btn:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
 
 /* Header controls */
 .header-controls {
@@ -486,4 +548,162 @@ footer {
     border: 1px solid var(--border-color);
     color: var(--text-color);
     border-radius: 4px;
+}
+
+/* Download indicator in header */
+.download-indicator {
+    position: relative;
+    background: var(--accent);
+    color: white;
+    border-radius: 12px;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    cursor: pointer;
+}
+
+.download-indicator.hidden {
+    display: none;
+}
+
+.download-indicator.active .download-icon {
+    animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-2px); }
+}
+
+/* Downloads section */
+.downloads-section {
+    margin-bottom: 1.5rem;
+}
+
+.downloads-section h3 {
+    font-size: 0.9rem;
+    color: var(--secondary-text);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.downloads-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.downloads-list:empty::before {
+    content: "No downloads";
+    color: var(--secondary-text);
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+.download-item {
+    background: var(--item-bg);
+    padding: 0.8rem;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+}
+
+.download-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.download-item-filename {
+    font-weight: 500;
+    color: var(--text-color);
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 300px;
+}
+
+.download-item-status {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    text-transform: uppercase;
+}
+
+.download-item-status.pending {
+    background: var(--secondary-text);
+}
+
+.download-item-status.in_progress {
+    background: var(--accent);
+}
+
+.download-item-status.completed {
+    background: #4caf50;
+}
+
+.download-item-status.failed {
+    background: #f44336;
+}
+
+.download-item-status.cancelled {
+    background: var(--secondary-text);
+}
+
+.download-progress-bar {
+    height: 6px;
+    background: var(--border-color);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 0.3rem;
+}
+
+.download-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--highlight));
+    transition: width 0.3s ease;
+}
+
+.download-item-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--secondary-text);
+}
+
+.download-item-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.download-cancel-btn {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.download-cancel-btn:hover {
+    background: var(--hover-bg);
+}
+
+.tab-content h3 {
+    font-size: 0.9rem;
+    color: var(--secondary-text);
+    margin-bottom: 0.5rem;
+    margin-top: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.tab-content h3:first-child {
+    margin-top: 0;
 }
