@@ -287,11 +287,6 @@ button.disabled {
     width: 80px;
 }
 
-#start-beam {
-    margin-left: auto;
-    padding: 0.4rem 1rem;
-}
-
 /* Beam Paths Grid */
 .beam-paths-grid {
     display: grid;
@@ -299,6 +294,7 @@ button.disabled {
     gap: 1rem;
     overflow-y: auto;
     flex: 1;
+    align-content: start;
 }
 
 .beam-path-card {
@@ -394,6 +390,17 @@ button.disabled {
 
 .beam-action-btn.extend:hover {
     opacity: 0.9;
+}
+
+.beam-action-btn.adopt {
+    background: #10b981;
+    border-color: #10b981;
+    color: white;
+}
+
+.beam-action-btn.adopt:hover {
+    background: #059669;
+    border-color: #059669;
 }
 
 .beam-action-btn.delete:hover {

@@ -59,7 +59,16 @@ if (starterSelect) {
     starterSelect.addEventListener('change', (e) => {
         contextInput.value = e.target.value;
         starterSelect.value = '';
+
+        // Always fetch candidates so tokens view is updated when switching back
         fetchCandidates();
+
+        // Also refresh beam paths if in beam view
+        const inBeamView = beamView.classList.contains('active');
+        if (inBeamView) {
+            scheduleBeamGenerate();
+        }
+
         contextInput.focus();
     });
 }
@@ -68,7 +77,16 @@ if (starterSelect) {
 if (clearContextBtn) {
     clearContextBtn.addEventListener('click', () => {
         contextInput.value = '';
-        fetchCandidates();
+        candidatesList.innerHTML = '';
+        currentCandidates = [];
+
+        // Clear beam paths if in beam view
+        if (beamView.classList.contains('active')) {
+            beamPaths = [];
+            beamLastContext = '';
+            beamPathsGrid.innerHTML = '<div class="beam-empty-state"><p>Enter some context first</p></div>';
+        }
+
         contextInput.focus();
     });
 }
@@ -232,7 +250,15 @@ function escapeHtml(text) {
 // Event Listeners
 contextInput.addEventListener('input', () => {
     clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(fetchCandidates, 500);
+    debounceTimer = setTimeout(() => {
+        // Check if we're in beam view (has active class, not hidden)
+        const inBeamView = beamView.classList.contains('active');
+        if (inBeamView) {
+            scheduleBeamGenerate();
+        } else {
+            fetchCandidates();
+        }
+    }, 500);
 });
 
 // Update controls
@@ -728,8 +754,10 @@ const beamPathsSlider = document.getElementById('beam-paths-slider');
 const beamDepthSlider = document.getElementById('beam-depth-slider');
 const beamPathsVal = document.getElementById('beam-paths-val');
 const beamDepthVal = document.getElementById('beam-depth-val');
-const startBeamBtn = document.getElementById('start-beam');
 const beamPathsGrid = document.getElementById('beam-paths-grid');
+
+// Debounce timer for slider changes
+let beamSliderDebounce = null;
 
 // View toggle
 viewToggles.forEach(btn => {
@@ -765,23 +793,34 @@ viewToggles.forEach(btn => {
     });
 });
 
-// Beam sliders
+// Beam sliders - auto-generate paths on change with debouncing
 if (beamPathsSlider && beamPathsVal) {
     beamPathsSlider.addEventListener('input', (e) => {
         beamPathsVal.textContent = e.target.value;
+        scheduleBeamGenerate();
     });
 }
 
 if (beamDepthSlider && beamDepthVal) {
     beamDepthSlider.addEventListener('input', (e) => {
         beamDepthVal.textContent = e.target.value;
+        scheduleBeamGenerate();
     });
 }
 
-// Start beam search
-if (startBeamBtn) {
-    startBeamBtn.addEventListener('click', generateBeamPaths);
+function scheduleBeamGenerate() {
+    if (beamSliderDebounce) {
+        clearTimeout(beamSliderDebounce);
+    }
+    beamSliderDebounce = setTimeout(() => {
+        if (contextInput.value.trim()) {
+            generateBeamPaths();
+        }
+    }, 300);
 }
+
+// Track current beam generation request to ignore stale results
+let currentBeamRequestId = 0;
 
 async function generateBeamPaths() {
     const context = contextInput.value.trim();
@@ -790,9 +829,9 @@ async function generateBeamPaths() {
         return;
     }
 
+    // Increment request ID and capture it for this request
+    const requestId = ++currentBeamRequestId;
     isBeamLoading = true;
-    startBeamBtn.disabled = true;
-    startBeamBtn.textContent = 'Generating...';
     beamPathsGrid.innerHTML = '<div class="beam-loading">Generating paths...</div>';
 
     try {
@@ -809,19 +848,36 @@ async function generateBeamPaths() {
             })
         });
 
+        // Ignore response if a newer request has been initiated
+        if (requestId !== currentBeamRequestId) {
+            return;
+        }
+
         if (!res.ok) throw new Error('Failed to generate paths');
 
         const data = await res.json();
-        beamPaths = data.paths;
+        // Deduplicate paths by text (keep first occurrence)
+        const seenTexts = new Set();
+        beamPaths = data.paths.filter(p => {
+            if (seenTexts.has(p.text)) {
+                return false;
+            }
+            seenTexts.add(p.text);
+            return true;
+        });
         beamLastContext = context;  // Track context used for these paths
         renderBeamPaths();
     } catch (e) {
-        console.error(e);
-        beamPathsGrid.innerHTML = '<div class="beam-empty-state"><p>Error generating paths</p></div>';
+        // Only show error if this is still the current request
+        if (requestId === currentBeamRequestId) {
+            console.error(e);
+            beamPathsGrid.innerHTML = '<div class="beam-empty-state"><p>Error generating paths</p></div>';
+        }
     } finally {
-        isBeamLoading = false;
-        startBeamBtn.disabled = false;
-        startBeamBtn.textContent = 'Generate Paths';
+        // Only clear loading state if this is still the current request
+        if (requestId === currentBeamRequestId) {
+            isBeamLoading = false;
+        }
     }
 }
 
@@ -855,8 +911,7 @@ function renderBeamPaths() {
             <div class="beam-path-tokens">${tokensHtml}</div>
             <div class="beam-path-actions">
                 <button class="beam-action-btn extend" onclick="extendBeamPath('${path.id}')">Extend</button>
-                <button class="beam-action-btn" onclick="adoptBeamPath('${path.id}')">Adopt</button>
-                <button class="beam-action-btn delete" onclick="deleteBeamPath('${path.id}')">Delete</button>
+                <button class="beam-action-btn adopt" onclick="adoptBeamPath('${path.id}')">Adopt</button>
             </div>
         `;
 
@@ -921,19 +976,12 @@ function adoptBeamPath(pathId) {
     contextInput.value = path.text;
     fetchCandidates();
 
-    // Clear the beam paths and tracked context for a fresh start
+    // Clear the beam paths and tracked context so new paths will generate
     beamPaths = [];
     beamLastContext = '';
-    beamPathsGrid.innerHTML = '<div class="beam-empty-state"><p>Path adopted. Generate new paths to explore from the updated context.</p></div>';
 
-    // Switch back to candidates view
-    viewToggles.forEach(b => b.classList.remove('active'));
-    viewToggles[0].classList.add('active');
-    candidatesView.classList.remove('hidden');
-    candidatesView.classList.add('active');
-    beamView.classList.remove('active');
-    beamView.classList.add('hidden');
-    autoInferBtn.classList.remove('hidden');
+    // Generate new paths from the updated context
+    generateBeamPaths();
 }
 
 function deleteBeamPath(pathId) {
