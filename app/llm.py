@@ -1,9 +1,18 @@
 from llama_cpp import Llama
+from llama_cpp._internals import LlamaModel
 from app.utils import get_model_path
 import math
 import threading
 import uuid
 import random
+
+# Workaround for llama-cpp-python bug where __del__ tries to access
+# self.sampler before checking if it exists
+_original_close = LlamaModel.close
+def _safe_close(self):
+    if hasattr(self, 'sampler'):
+        _original_close(self)
+LlamaModel.close = _safe_close
 
 
 class LLMEngine:
@@ -59,6 +68,7 @@ class LLMEngine:
         top_p: float = 0.95,
         repeat_penalty: float = 1.0,
     ):
+        # Try with requested logprobs first
         with self.lock:
             output = self.model.create_completion(
                 prompt,
@@ -70,7 +80,43 @@ class LLMEngine:
             )
 
         choice = output["choices"][0]
-        top_logprobs = choice["logprobs"]["top_logprobs"][0]
+        top_logprobs_list = choice["logprobs"].get("top_logprobs", [])
+
+        # If top_logprobs is empty, retry with smaller logprobs value (llama-cpp-python bug workaround)
+        if not top_logprobs_list:
+            print(f"DEBUG: Empty top_logprobs, retrying with logprobs=10...")
+            with self.lock:
+                output = self.model.create_completion(
+                    prompt,
+                    max_tokens=1,
+                    temperature=temp,
+                    top_k=top_k,
+                    logprobs=10,  # Use smaller value
+                    echo=False,
+                )
+            choice = output["choices"][0]
+            top_logprobs_list = choice["logprobs"].get("top_logprobs", [])
+
+            # If still empty, generate without logprobs and create a fake candidate
+            if not top_logprobs_list:
+                print(f"DEBUG: Still empty, generating without logprobs...")
+                with self.lock:
+                    output = self.model.create_completion(
+                        prompt,
+                        max_tokens=1,
+                        temperature=temp,
+                        top_k=top_k,
+                        echo=False,
+                    )
+                choice = output["choices"][0]
+                token_text = choice.get("text", "")
+                if token_text:
+                    # Create a single candidate with default probability
+                    return [{"token": token_text, "prob": 100.0, "logprob": 0.0, "excluded": False,
+                             "cumulative_prob": 100.0}]
+                raise ValueError("Failed to generate token")
+
+        top_logprobs = top_logprobs_list[0]
 
         candidates = []
 

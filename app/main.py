@@ -14,6 +14,11 @@ from app.llm import LLMEngine
 from app.models_manager import ModelManager, MODEL_DIR
 from app.download_manager import DownloadManager
 import os
+import logging
+import traceback
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="LLM Explorer")
 
@@ -150,4 +155,6 @@ def switch_model(request: SwitchModelRequest):
 
         return {"status": "success", "model": request.filename, "friendly_name": friendly_name}
     except Exception as e:
+        logger.error(f"Failed to load model {request.filename}: {e}")
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))

@@ -14,6 +14,12 @@ let debounceTimer;
 let autoInferRunning = false;
 let isLoadingCandidates = false;
 let currentCandidates = [];
+let pendingSelection = null;  // Track scheduled token selection to prevent duplicates
+let isSelectingToken = false;  // Prevent concurrent selectToken calls
+let selectionTimeoutId = null;  // Store timeout ID to clear if needed
+let lastSelectedToken = null;  // Prevent selecting the same token twice
+let candidatesGenerationId = 0;  // Track which "batch" of candidates we're using
+let consecutiveErrors = 0;  // Track consecutive API errors
 
 // Downloads state
 let downloads = {};
@@ -131,15 +137,43 @@ function startAutoInfer() {
     autoInferRunning = true;
     autoInferBtn.textContent = '■';
     autoInferBtn.title = 'Stop auto-inference';
+    pendingSelection = null;
+    lastSelectedToken = null;
+    candidatesGenerationId = 0;
+    consecutiveErrors = 0;  // Reset error counter
+    if (selectionTimeoutId) {
+        clearTimeout(selectionTimeoutId);
+        selectionTimeoutId = null;
+    }
+
     autoInferInterval = setInterval(() => {
-        if (isLoadingCandidates) return;
+        if (isLoadingCandidates || pendingSelection || isSelectingToken) return;
         if (!currentCandidates.length) {
             fetchCandidates();
             return;
         }
-        const selected = weightedRandom(currentCandidates.filter(c => !c.excluded));
+        // Filter out the last selected token to prevent immediate repeats
+        const eligible = currentCandidates.filter(c =>
+            !c.excluded && c.token !== lastSelectedToken
+        );
+        if (!eligible.length) return;  // No eligible tokens
+
+        const selected = weightedRandom(eligible);
+        const scheduledGenId = candidatesGenerationId;
+        pendingSelection = { token: selected.token, genId: scheduledGenId };
         flashSelectedToken(selected.token);
-        setTimeout(() => selectToken(selected.token), 150);
+        selectionTimeoutId = setTimeout(() => {
+            selectionTimeoutId = null;
+            if (!autoInferRunning || isLoadingCandidates || isSelectingToken) {
+                pendingSelection = null;
+                return;
+            }
+            // Only proceed if we're still on the same generation of candidates
+            if (pendingSelection && pendingSelection.genId === scheduledGenId) {
+                selectToken(pendingSelection.token);
+                pendingSelection = null;
+            }
+        }, 150);
     }, 1000 / TOP_TOKENS_PER_SECOND);
 }
 
@@ -149,6 +183,12 @@ function stopAutoInfer() {
     autoInferBtn.title = 'Auto-inference';
     clearInterval(autoInferInterval);
     autoInferInterval = null;
+    pendingSelection = null;
+    lastSelectedToken = null;
+    if (selectionTimeoutId) {
+        clearTimeout(selectionTimeoutId);
+        selectionTimeoutId = null;
+    }
 }
 
 async function fetchCandidates() {
@@ -169,12 +209,29 @@ async function fetchCandidates() {
             })
         });
 
-        if (!response.ok) throw new Error("API Error");
+        if (!response.ok) {
+            let errorMsg = "API Error: " + response.status;
+            try {
+                const errData = await response.json();
+                if (errData.detail) {
+                    errorMsg = errData.detail;
+                }
+            } catch (_) {}
+            throw new Error(errorMsg);
+        }
 
         const data = await response.json();
+        consecutiveErrors = 0;  // Reset error counter on success
         renderCandidates(data.candidates);
     } catch (e) {
-        console.error(e);
+        console.error('[AutoInfer] Fetch error:', e.message);
+        consecutiveErrors++;
+        // Stop auto-infer after 2 consecutive errors to prevent repetition loop
+        if (consecutiveErrors >= 2 && autoInferRunning) {
+            console.error('[AutoInfer] Stopping due to consecutive errors');
+            stopAutoInfer();
+            alert('Auto-inference stopped due to API error: ' + e.message);
+        }
     } finally {
         isLoadingCandidates = false;
     }
@@ -191,6 +248,8 @@ function getProbColor(prob) {
 function renderCandidates(candidates) {
     candidatesList.innerHTML = '';
     currentCandidates = candidates;
+    candidatesGenerationId++;  // New batch of candidates
+    console.log('[AutoInfer] New candidates, generation:', candidatesGenerationId, 'lastSelected:', lastSelectedToken);
 
     candidates.forEach(c => {
         const div = document.createElement('div');
@@ -215,10 +274,17 @@ function renderCandidates(candidates) {
     });
 }
 
-function selectToken(token) {
+async function selectToken(token) {
+    if (isSelectingToken) {
+        console.log('[AutoInfer] selectToken blocked, already selecting');
+        return;  // Prevent concurrent calls
+    }
+    isSelectingToken = true;
+    console.log('[AutoInfer] Selecting token:', repr(token), 'genId:', candidatesGenerationId);
+
     contextInput.value += token;
-    // Trigger update immediately
-    fetchCandidates();
+    lastSelectedToken = token;  // Track this as the last selected token
+
     // Scroll textarea to bottom
     contextInput.scrollTop = contextInput.scrollHeight;
 
@@ -230,9 +296,21 @@ function selectToken(token) {
             if (autoInferRunning) {
                 stopAutoInfer();
             }
-            break;
+            isSelectingToken = false;
+            return;
         }
     }
+
+    // Trigger fetch and wait for it to complete
+    await fetchCandidates();
+
+    // Only clear flag after fetch completes
+    isSelectingToken = false;
+    console.log('[AutoInfer] isSelectingToken cleared');
+}
+
+function repr(s) {
+    return JSON.stringify(s);
 }
 
 function escapeHtml(text) {

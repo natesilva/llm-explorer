@@ -121,19 +121,14 @@
                             <option value="SELECT * FROM">SQL: SELECT</option>
                             <option value="## ">Markdown: ##</option>
                             <option
-                                value="USER: What is the capital of France?&#10;&#10;ASSISTANT:"
+                                value="SYSTEM INSTRUCTION: You are a helpful, accurate assistant that responds clearly and concisely. End your response with:&lt;|end_of_text|&gt;&#10;&#10;USER: What is the capital of France?&#10;&#10;ASSISTANT:"
                             >
                                 Chat: User asks about France
                             </option>
                             <option
-                                value="SYSTEM: You are a helpful assistant. You must always answer in rhyme. End your response with:&lt;|end_of_text|&gt;&#10;&#10;USER: What is the capital of France?&#10;&#10;ASSISTANT:"
+                                value="SYSTEM INSTRUCTION: You are a helpful, accurate assistant that always responds in rhyme. End your response with:&lt;|end_of_text|&gt;&#10;&#10;USER: What is the capital of France?&#10;&#10;ASSISTANT:"
                             >
                                 Chat: System instruction (rhyme)
-                            </option>
-                            <option
-                                value="SYSTEM INSTRUCTION (Highest Priority): You are a helpful assistant. Always respond with only the direct answer, no complete sentences or explanations. End your response with:&lt;|end_of_text|&gt;&#10;&#10;USER: What is the capital of France?&#10;&#10;ASSISTANT:"
-                            >
-                                Chat: System instruction (concise)
                             </option>
                             <option value="Había una vez">
                                 Español: Había una vez...
@@ -352,6 +347,6 @@
                 </div>
             </div>
         </div>
-        <script src="/static/app.js"></script>
+        <script src="/static/app.js?v=2"></script>
     </body>
 </html>
