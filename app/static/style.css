@@ -1099,10 +1099,11 @@ footer {
 
 #system-prompt {
     flex: none;
-    min-height: 50px;
+    min-height: 80px;
     padding: 0.5rem;
     font-size: 0.85rem;
     width: 100%;
+    box-sizing: border-box;
 }
 
 .chat-messages {

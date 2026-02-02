@@ -103,78 +103,84 @@
                     <!-- Context Mode -->
                     <div id="context-mode" class="mode-content active">
                         <div class="context-controls">
-                        <select id="starter-select" class="starter-dropdown">
-                            <option value="" disabled selected>Starter texts</option>
-                            <option value="Once upon a time, there was a">
-                                Fantasy: Once upon a time...
-                            </option>
-                            <option value="In a world where">
-                                Sci-Fi: In a world where...
-                            </option>
-                            <option value="It was a dark and stormy night">
-                                Gothic: It was a dark and stormy...
-                            </option>
-                            <option value="The detective looked at">
-                                Mystery: The detective looked at...
-                            </option>
-                            <option value="The answer is">Q&A: The answer is...</option>
-                            <option value="The main difference between">
-                                Education: The main difference between...
-                            </option>
-                            <option value="According to the data,">
-                                Journalism: According to the data...
-                            </option>
-                            <option value="The problem with">
-                                Essay: The problem with...
-                            </option>
-                            <option value="function">Code: function</option>
-                            <option value="def ">Python: def</option>
-                            <option value="SELECT * FROM">SQL: SELECT</option>
-                            <option value="## ">Markdown: ##</option>
-                            <option
-                                value="SYSTEM INSTRUCTION: You are a helpful, accurate assistant that responds clearly and concisely. End your response with:&lt;|end_of_text|&gt;&#10;&#10;USER: What is the capital of France?&#10;&#10;ASSISTANT:"
+                            <select id="starter-select" class="starter-dropdown">
+                                <option value="" disabled selected>Starter texts</option>
+                                <option value="Once upon a time, there was a">
+                                    Fantasy: Once upon a time...
+                                </option>
+                                <option value="In a world where">
+                                    Sci-Fi: In a world where...
+                                </option>
+                                <option value="It was a dark and stormy night">
+                                    Gothic: It was a dark and stormy...
+                                </option>
+                                <option value="The detective looked at">
+                                    Mystery: The detective looked at...
+                                </option>
+                                <option value="The answer is">
+                                    Q&A: The answer is...
+                                </option>
+                                <option value="The main difference between">
+                                    Education: The main difference between...
+                                </option>
+                                <option value="According to the data,">
+                                    Journalism: According to the data...
+                                </option>
+                                <option value="The problem with">
+                                    Essay: The problem with...
+                                </option>
+                                <option value="function">Code: function</option>
+                                <option value="def ">Python: def</option>
+                                <option value="SELECT * FROM">SQL: SELECT</option>
+                                <option value="## ">Markdown: ##</option>
+                                <option
+                                    value="SYSTEM INSTRUCTION: You are a helpful, accurate assistant that responds clearly and concisely. End your response with:&lt;|end_of_text|&gt;&#10;&#10;USER: What is the capital of France?&#10;&#10;ASSISTANT:"
+                                >
+                                    Chat: User asks about France
+                                </option>
+                                <option
+                                    value="SYSTEM INSTRUCTION: You are a helpful, accurate assistant that always responds in rhyme. End your response with:&lt;|end_of_text|&gt;&#10;&#10;USER: What is the capital of France?&#10;&#10;ASSISTANT:"
+                                >
+                                    Chat: System instruction (rhyme)
+                                </option>
+                                <option value="Había una vez">
+                                    Español: Había una vez...
+                                </option>
+                                <option value="En conclusión">
+                                    Español: En conclusión...
+                                </option>
+                                <option value="Il était une fois">
+                                    Français: Il était une fois...
+                                </option>
+                                <option value="En résumé">Français: En résumé...</option>
+                                <option value="Es war einmal">
+                                    Deutsch: Es war einmal...
+                                </option>
+                                <option value="Zusammenfassend">
+                                    Deutsch: Zusammenfassend...
+                                </option>
+                                <option value="昔々、あるところに">
+                                    日本語: 昔々、あるところに...
+                                </option>
+                                <option value="要するに">日本語: 要するに...</option>
+                                <option value="كان يا ما كان">
+                                    العربية: كان يا ما كان...
+                                </option>
+                                <option value="في الختام">العربية: في الختام...</option>
+                            </select>
+                            <button
+                                id="clear-context"
+                                class="icon-btn"
+                                title="Clear context"
                             >
-                                Chat: User asks about France
-                            </option>
-                            <option
-                                value="SYSTEM INSTRUCTION: You are a helpful, accurate assistant that always responds in rhyme. End your response with:&lt;|end_of_text|&gt;&#10;&#10;USER: What is the capital of France?&#10;&#10;ASSISTANT:"
-                            >
-                                Chat: System instruction (rhyme)
-                            </option>
-                            <option value="Había una vez">
-                                Español: Había una vez...
-                            </option>
-                            <option value="En conclusión">
-                                Español: En conclusión...
-                            </option>
-                            <option value="Il était une fois">
-                                Français: Il était une fois...
-                            </option>
-                            <option value="En résumé">Français: En résumé...</option>
-                            <option value="Es war einmal">
-                                Deutsch: Es war einmal...
-                            </option>
-                            <option value="Zusammenfassend">
-                                Deutsch: Zusammenfassend...
-                            </option>
-                            <option value="昔々、あるところに">
-                                日本語: 昔々、あるところに...
-                            </option>
-                            <option value="要するに">日本語: 要するに...</option>
-                            <option value="كان يا ما كان">
-                                العربية: كان يا ما كان...
-                            </option>
-                            <option value="في الختام">العربية: في الختام...</option>
-                        </select>
-                        <button id="clear-context" class="icon-btn" title="Clear context">
-                            ✕
-                        </button>
-                    </div>
-                    <textarea
-                        id="context-window"
-                        dir="auto"
-                        placeholder="Type here or select a prompt..."
-                    ></textarea>
+                                ✕
+                            </button>
+                        </div>
+                        <textarea
+                            id="context-window"
+                            dir="auto"
+                            placeholder="Type here or select a prompt..."
+                        ></textarea>
                     </div>
 
                     <!-- Chat Mode -->
@@ -185,17 +191,17 @@
                                 <select id="system-preset-select" class="system-dropdown">
                                     <option value="standard">Standard Assistant</option>
                                     <option value="rhyme">Rhyming Assistant</option>
-                                    <option value="creative">Creative Writing Partner</option>
+                                    <option value="creative">
+                                        Creative Writing Partner
+                                    </option>
                                     <option value="code">Code Helper</option>
                                     <option value="concise">Concise Responder</option>
                                     <option value="educator">Educator</option>
                                 </select>
                             </div>
-                            <label>System Prompt</label>
-                            <textarea
-                                id="system-prompt"
-                                rows="2"
-                            >SYSTEM INSTRUCTION: You are a helpful, accurate assistant that responds clearly and concisely. End your response with:&lt;|end_of_text|&gt;</textarea>
+                            <textarea id="system-prompt" rows="4">
+SYSTEM INSTRUCTION: You are a helpful, accurate assistant that responds clearly and concisely. End your response with:&lt;|end_of_text|&gt;</textarea
+                            >
                         </div>
                         <div class="chat-messages" id="chat-messages">
                             <div class="chat-empty-state">Start a conversation...</div>
