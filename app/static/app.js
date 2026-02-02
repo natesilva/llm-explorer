@@ -9,6 +9,16 @@ const starterSelect = document.getElementById('starter-select');
 const clearContextBtn = document.getElementById('clear-context');
 const autoInferBtn = document.getElementById('auto-infer');
 
+// Chat mode elements
+const modeToggles = document.querySelectorAll('.mode-toggle');
+const contextMode = document.getElementById('context-mode');
+const chatMode = document.getElementById('chat-mode');
+const systemPromptInput = document.getElementById('system-prompt');
+const systemPresetSelect = document.getElementById('system-preset-select');
+const chatMessagesContainer = document.getElementById('chat-messages');
+const chatUserInput = document.getElementById('chat-user-input');
+const chatSendBtn = document.getElementById('chat-send-btn');
+
 // State
 let debounceTimer;
 let autoInferRunning = false;
@@ -29,6 +39,13 @@ let downloadPollInterval = null;
 let beamPaths = [];
 let isBeamLoading = false;
 let beamLastContext = '';  // Track context used for current paths
+
+// Chat mode state
+let currentMode = 'context';  // 'context' or 'chat'
+let chatMessages = [];  // Array of {role: 'user'|'assistant', content: string}
+let isGeneratingResponse = false;
+let currentAssistantContent = '';
+let isFirstAssistantToken = false;  // Track first token to strip leading whitespace
 
 // Theme switching
 function setTheme(theme) {
@@ -60,6 +77,54 @@ if (themeToggleBtn) {
     themeToggleBtn.addEventListener('click', toggleTheme);
 }
 
+// Mode toggles
+modeToggles.forEach(btn => {
+    btn.addEventListener('click', () => {
+        const mode = btn.dataset.mode;
+        switchMode(mode);
+    });
+});
+
+function switchMode(mode) {
+    // Stop auto-inference if running
+    if (autoInferRunning) {
+        stopAutoInfer();
+    }
+
+    currentMode = mode;
+    modeToggles.forEach(b => b.classList.remove('active'));
+    document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
+
+    if (mode === 'context') {
+        contextMode.classList.remove('hidden');
+        contextMode.classList.add('active');
+        chatMode.classList.remove('active');
+        chatMode.classList.add('hidden');
+        // Sync chat messages to context textarea
+        syncChatToContext();
+        // Refresh candidates for the context
+        fetchCandidates();
+    } else {
+        chatMode.classList.remove('hidden');
+        chatMode.classList.add('active');
+        contextMode.classList.remove('active');
+        contextMode.classList.add('hidden');
+        // Sync context textarea to chat (if it looks like chat format)
+        syncContextToChat();
+        renderChatMessages();
+        // In chat mode, only show candidates if we have messages (user + assistant)
+        // If waiting for user input, clear candidates
+        if (chatMessages.length === 0 && !isGeneratingResponse) {
+            candidatesList.innerHTML = '<div class="chat-empty-state">Send a message to see predictions</div>';
+            currentCandidates = [];
+        } else {
+            // Sync to context and fetch candidates
+            syncChatToContext();
+            fetchCandidates();
+        }
+    }
+}
+
 // Starter text dropdown
 if (starterSelect) {
     starterSelect.addEventListener('change', (e) => {
@@ -82,7 +147,19 @@ if (starterSelect) {
 // Clear context button
 if (clearContextBtn) {
     clearContextBtn.addEventListener('click', () => {
-        contextInput.value = '';
+        if (currentMode === 'chat') {
+            // Clear chat state
+            chatMessages = [];
+            currentAssistantContent = '';
+            isGeneratingResponse = false;
+            chatUserInput.disabled = false;
+            chatSendBtn.disabled = false;
+            renderChatMessages();
+            syncChatToContext();
+        } else {
+            // Clear context textarea
+            contextInput.value = '';
+        }
         candidatesList.innerHTML = '';
         currentCandidates = [];
 
@@ -93,7 +170,11 @@ if (clearContextBtn) {
             beamPathsGrid.innerHTML = '<div class="beam-empty-state"><p>Enter some context first</p></div>';
         }
 
-        contextInput.focus();
+        if (currentMode === 'context') {
+            contextInput.focus();
+        } else {
+            chatUserInput.focus();
+        }
     });
 }
 
@@ -282,19 +363,32 @@ async function selectToken(token) {
     isSelectingToken = true;
     console.log('[AutoInfer] Selecting token:', repr(token), 'genId:', candidatesGenerationId);
 
-    contextInput.value += token;
-    lastSelectedToken = token;  // Track this as the last selected token
+    // Get the text to check for end tokens
+    let textForEndCheck;
 
-    // Scroll textarea to bottom
-    contextInput.scrollTop = contextInput.scrollHeight;
+    if (currentMode === 'chat' && isGeneratingResponse) {
+        // Chat mode: append to assistant response
+        addAssistantToken(token);
+        syncChatToContext();
+        textForEndCheck = currentAssistantContent;
+    } else {
+        // Context mode: original behavior
+        contextInput.value += token;
+        lastSelectedToken = token;  // Track this as the last selected token
+        // Scroll textarea to bottom
+        contextInput.scrollTop = contextInput.scrollHeight;
+        textForEndCheck = contextInput.value;
+    }
 
     // Check for end token - stop auto-inference if found
     const endTokenPatterns = ['<|end_of_text|>', '<|eot|>', '</s>', '<end>', '<|END|>'];
-    const text = contextInput.value;
     for (const pattern of endTokenPatterns) {
-        if (text.endsWith(pattern)) {
+        if (textForEndCheck.endsWith(pattern)) {
             if (autoInferRunning) {
                 stopAutoInfer();
+            }
+            if (currentMode === 'chat' && isGeneratingResponse) {
+                finishAssistantMessage();
             }
             isSelectingToken = false;
             return;
@@ -327,6 +421,9 @@ function escapeHtml(text) {
 
 // Event Listeners
 contextInput.addEventListener('input', () => {
+    // Skip if in chat mode (syncChatToContext handles updates)
+    if (currentMode === 'chat') return;
+
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
         // Check if we're in beam view (has active class, not hidden)
@@ -823,6 +920,186 @@ window.cancelDownload = async (downloadId) => {
 
 // Make switchModel global
 window.switchModel = switchModel;
+
+// Chat mode functions
+const SYSTEM_PRESETS = {
+    standard: 'SYSTEM INSTRUCTION: You are a helpful, accurate assistant that responds clearly and concisely. End your response with:<|end_of_text|>',
+    rhyme: 'SYSTEM INSTRUCTION: You are a helpful assistant that always responds in rhyme. End your response with:<|end_of_text|>',
+    creative: 'SYSTEM INSTRUCTION: You are a creative writing partner. You help with stories, poetry, and creative projects. Be imaginative and descriptive. End your response with:<|end_of_text|>',
+    code: 'SYSTEM INSTRUCTION: You are a coding assistant. You help with programming questions, write code, and debug issues. Provide clear explanations and code examples. End your response with:<|end_of_text|>',
+    concise: 'SYSTEM INSTRUCTION: You are a concise assistant. You respond with brief, to-the-point answers. End your response with:<|end_of_text|>',
+    educator: 'SYSTEM INSTRUCTION: You are an educator. You explain concepts clearly, use examples, and check for understanding. End your response with:<|end_of_text|>'
+};
+
+function syncChatToContext() {
+    // Build full context from chat messages
+    const systemPrompt = systemPromptInput.value.trim();
+    let fullContext = systemPrompt;
+
+    chatMessages.forEach(msg => {
+        if (msg.role === 'user') {
+            fullContext += '\n\nUSER: ' + msg.content;
+        } else {
+            fullContext += '\n\nASSISTANT: ' + msg.content;
+        }
+    });
+
+    // If assistant is currently generating, add their label and partial content
+    if (isGeneratingResponse) {
+        fullContext += '\n\nASSISTANT:' + currentAssistantContent;
+    }
+
+    contextInput.value = fullContext;
+}
+
+function syncContextToChat() {
+    const text = contextInput.value.trim();
+    if (!text) {
+        chatMessages = [];
+        return;
+    }
+
+    // Parse system instruction
+    const systemMatch = text.match(/(SYSTEM INSTRUCTION:.*?)(?=\n\nUSER:|$)/s);
+    if (systemMatch) {
+        systemPromptInput.value = systemMatch[1].trim();
+    }
+
+    // Parse messages (simple alternating pattern)
+    chatMessages = [];
+    const lines = text.split('\n\n');
+
+    for (const line of lines) {
+        if (line.startsWith('USER:')) {
+            chatMessages.push({
+                role: 'user',
+                content: line.slice(5).trim()
+            });
+        } else if (line.startsWith('ASSISTANT:')) {
+            chatMessages.push({
+                role: 'assistant',
+                content: line.slice(10).trim()
+            });
+        }
+    }
+}
+
+function renderChatMessages() {
+    chatMessagesContainer.innerHTML = '';
+
+    if (chatMessages.length === 0 && !isGeneratingResponse) {
+        chatMessagesContainer.innerHTML = '<div class="chat-empty-state">Start a conversation...</div>';
+        return;
+    }
+
+    chatMessages.forEach(msg => {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `chat-message ${msg.role}`;
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'content';
+        contentDiv.textContent = msg.content;  // textContent handles escaping and preserves newlines
+        msgDiv.innerHTML = `<div class="role-label">${msg.role}</div>`;
+        msgDiv.appendChild(contentDiv);
+        chatMessagesContainer.appendChild(msgDiv);
+    });
+
+    // Add generating assistant message if active
+    if (isGeneratingResponse) {
+        // Strip leading whitespace for display only (keep in context for LLM)
+        const displayContent = currentAssistantContent.replace(/^[\n\s]+/, '');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'chat-message assistant generating';
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'content';
+        contentDiv.textContent = displayContent;
+        msgDiv.innerHTML = `<div class="role-label">assistant</div>`;
+        msgDiv.appendChild(contentDiv);
+        chatMessagesContainer.appendChild(msgDiv);
+    }
+
+    // Scroll to bottom
+    chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+}
+
+function addUserMessage(content) {
+    chatMessages.push({ role: 'user', content });
+    currentAssistantContent = '';
+    renderChatMessages();
+}
+
+function addAssistantToken(token) {
+    currentAssistantContent += token;
+    renderChatMessages();
+}
+
+function finishAssistantMessage() {
+    if (currentAssistantContent) {
+        // Strip end token patterns from the content (chat mode only)
+        let cleanedContent = currentAssistantContent;
+        const endTokenPatterns = ['<|end_of_text|>', '<|eot|>', '</s>', '<end>', '<|END|>'];
+        for (const pattern of endTokenPatterns) {
+            cleanedContent = cleanedContent.replace(pattern, '');
+        }
+        // Strip leading whitespace for saved message (display only)
+        cleanedContent = cleanedContent.replace(/^[\n\s]+/, '');
+        chatMessages.push({ role: 'assistant', content: cleanedContent });
+    }
+    currentAssistantContent = '';
+    isGeneratingResponse = false;
+    renderChatMessages();
+    // Clear candidates - we're now waiting for user input
+    candidatesList.innerHTML = '<div class="chat-empty-state">Send a message to see predictions</div>';
+    currentCandidates = [];
+    chatUserInput.disabled = false;
+    chatSendBtn.disabled = false;
+    chatUserInput.focus();
+}
+
+// System preset handler
+if (systemPresetSelect) {
+    systemPresetSelect.addEventListener('change', (e) => {
+        const preset = e.target.value;
+        systemPromptInput.value = SYSTEM_PRESETS[preset];
+        syncChatToContext();
+    });
+}
+
+// Chat send handler
+if (chatSendBtn) {
+    chatSendBtn.addEventListener('click', sendChatMessage);
+}
+
+if (chatUserInput) {
+    chatUserInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendChatMessage();
+        }
+    });
+}
+
+async function sendChatMessage() {
+    const content = chatUserInput.value.trim();
+    if (!content || isGeneratingResponse) return;
+
+    // Add user message
+    addUserMessage(content);
+    chatUserInput.value = '';
+
+    // Prepare for assistant response
+    isGeneratingResponse = true;
+    currentAssistantContent = '';
+    isFirstAssistantToken = true;  // Reset flag for new response
+    chatUserInput.disabled = true;
+    chatSendBtn.disabled = true;
+
+    // Sync to context and fetch candidates
+    syncChatToContext();
+    await fetchCandidates();
+
+    // Start auto-inference
+    startAutoInfer();
+}
 
 // Beam Search functionality
 const viewToggles = document.querySelectorAll('.view-toggle');

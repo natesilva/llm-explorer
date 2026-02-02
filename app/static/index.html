@@ -90,8 +90,19 @@
 
             <main>
                 <div class="panel left">
-                    <h2>Context</h2>
-                    <div class="context-controls">
+                    <div class="panel-title-row">
+                        <h2>Input</h2>
+                        <div class="mode-toggles">
+                            <button class="mode-toggle active" data-mode="context">
+                                Context
+                            </button>
+                            <button class="mode-toggle" data-mode="chat">Chat</button>
+                        </div>
+                    </div>
+
+                    <!-- Context Mode -->
+                    <div id="context-mode" class="mode-content active">
+                        <div class="context-controls">
                         <select id="starter-select" class="starter-dropdown">
                             <option value="" disabled selected>Starter texts</option>
                             <option value="Once upon a time, there was a">
@@ -164,6 +175,40 @@
                         dir="auto"
                         placeholder="Type here or select a prompt..."
                     ></textarea>
+                    </div>
+
+                    <!-- Chat Mode -->
+                    <div id="chat-mode" class="mode-content hidden">
+                        <div class="chat-system-prompt">
+                            <div class="system-controls">
+                                <label>System Preset</label>
+                                <select id="system-preset-select" class="system-dropdown">
+                                    <option value="standard">Standard Assistant</option>
+                                    <option value="rhyme">Rhyming Assistant</option>
+                                    <option value="creative">Creative Writing Partner</option>
+                                    <option value="code">Code Helper</option>
+                                    <option value="concise">Concise Responder</option>
+                                    <option value="educator">Educator</option>
+                                </select>
+                            </div>
+                            <label>System Prompt</label>
+                            <textarea
+                                id="system-prompt"
+                                rows="2"
+                            >SYSTEM INSTRUCTION: You are a helpful, accurate assistant that responds clearly and concisely. End your response with:&lt;|end_of_text|&gt;</textarea>
+                        </div>
+                        <div class="chat-messages" id="chat-messages">
+                            <div class="chat-empty-state">Start a conversation...</div>
+                        </div>
+                        <div class="chat-input-area">
+                            <textarea
+                                id="chat-user-input"
+                                placeholder="Type your message..."
+                                rows="2"
+                            ></textarea>
+                            <button id="chat-send-btn">Send ▶</button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="panel right">
