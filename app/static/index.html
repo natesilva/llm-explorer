@@ -173,20 +173,30 @@
                                 </option>
                                 <option value="في الختام">العربية: في الختام...</option>
                             </select>
-                            <button
-                                id="clear-context"
-                                class="icon-btn"
-                                title="Clear context"
-                            >
-                                ✕
-                            </button>
-                        </div>
-                        <textarea
-                            id="context-window"
-                            dir="auto"
-                            placeholder="Type here or select a prompt..."
-                        ></textarea>
-                    </div>
+                             <button
+                                 id="clear-context"
+                                 class="icon-btn"
+                                 title="Clear context"
+                             >
+                                 ✕
+                             </button>
+                             <button
+                                 id="syntax-toggle"
+                                 class="icon-btn"
+                                 title="Toggle syntax highlighting"
+                             >
+                                 🎨
+                             </button>
+                         </div>
+                         <div class="input-container">
+                             <textarea
+                                 id="context-window"
+                                 dir="auto"
+                                 placeholder="Type here or select a prompt..."
+                             ></textarea>
+                             <div id="context-highlighted" class="context-highlighted hidden"></div>
+                         </div>
+                     </div>
 
                     <!-- Chat Mode -->
                     <div id="chat-mode" class="mode-content hidden">

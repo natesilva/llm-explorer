@@ -7,6 +7,7 @@ const penaltySlider = document.getElementById('penalty-slider');
 const themeToggleBtn = document.getElementById('theme-toggle');
 const starterSelect = document.getElementById('starter-select');
 const clearContextBtn = document.getElementById('clear-context');
+const syntaxToggleBtn = document.getElementById('syntax-toggle');
 const autoInferBtn = document.getElementById('auto-infer');
 
 // Chat mode elements
@@ -44,6 +45,9 @@ let beamLastContext = '';  // Track context used for current paths
 let currentMode = 'context';  // 'context' or 'chat'
 let chatMessages = [];  // Array of {role: 'user'|'assistant', content: string}
 let isGeneratingResponse = false;
+
+// Syntax highlighting state
+let syntaxHighlightEnabled = false;
 let currentAssistantContent = '';
 let isFirstAssistantToken = false;  // Track first token to strip leading whitespace
 
@@ -75,6 +79,11 @@ initTheme();
 // Theme toggle event listener
 if (themeToggleBtn) {
     themeToggleBtn.addEventListener('click', toggleTheme);
+}
+
+// Syntax toggle event listener
+if (syntaxToggleBtn) {
+    syntaxToggleBtn.addEventListener('click', toggleSyntaxHighlighting);
 }
 
 // Mode toggles
@@ -140,6 +149,8 @@ if (starterSelect) {
             scheduleBeamGenerate();
         }
 
+        updateSyntaxHighlight();
+
         contextInput.focus();
     });
 }
@@ -169,6 +180,8 @@ if (clearContextBtn) {
             beamLastContext = '';
             beamPathsGrid.innerHTML = '<div class="beam-empty-state"><p>Enter some context first</p></div>';
         }
+
+        updateSyntaxHighlight();
 
         if (currentMode === 'context') {
             contextInput.focus();
@@ -380,6 +393,9 @@ async function selectToken(token) {
         textForEndCheck = contextInput.value;
     }
 
+    // Update syntax highlighting if enabled
+    updateSyntaxHighlight();
+
     // Check for end token - stop auto-inference if found
     // Strip trailing whitespace first (models often add newlines after end tokens)
     const textForEndCheckStripped = textForEndCheck.trimEnd();
@@ -421,6 +437,62 @@ function escapeHtml(text) {
         .replace(/ /g, "·"); // Visualize spaces
 }
 
+function escapeHtmlPreserveWhitespace(text) {
+    // Basic escaping without visualizing spaces/newlines (for syntax highlighting)
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function highlightChatML(text) {
+    let result = escapeHtmlPreserveWhitespace(text);
+
+    // Highlight <|im_start|>role and <|im_end|> tokens
+    result = result.replace(/(&lt;\|im_start\|&gt;)(\w+)?/g, (match, startToken, role) => {
+        if (role) {
+            const roleClass = role === 'system' ? 'hl-role-system' :
+                             role === 'user' ? 'hl-role-user' :
+                             role === 'assistant' ? 'hl-role-assistant' : 'hl-content-text';
+            return `<span class="hl-token-start">${startToken}</span><span class="${roleClass}">${role}</span>`;
+        }
+        return `<span class="hl-token-start">${startToken}</span>`;
+    });
+
+    result = result.replace(/&lt;\|im_end\|&gt;/g, '<span class="hl-token-end">&lt;|im_end|&gt;</span>');
+
+    // Also highlight <|end_of_text|> for consistency
+    result = result.replace(/&lt;\|end_of_text\|&gt;/g, '<span class="hl-token-end">&lt;|end_of_text|&gt;</span>');
+
+    return result;
+}
+
+function toggleSyntaxHighlighting() {
+    syntaxHighlightEnabled = !syntaxHighlightEnabled;
+    const contextWindow = document.getElementById('context-window');
+    const contextHighlighted = document.getElementById('context-highlighted');
+
+    if (syntaxHighlightEnabled) {
+        contextWindow.classList.add('hidden');
+        contextHighlighted.classList.remove('hidden');
+        updateSyntaxHighlight();
+    } else {
+        contextWindow.classList.remove('hidden');
+        contextHighlighted.classList.add('hidden');
+    }
+}
+
+function updateSyntaxHighlight() {
+    if (!syntaxHighlightEnabled) return;
+    const contextWindow = document.getElementById('context-window');
+    const contextHighlighted = document.getElementById('context-highlighted');
+    contextHighlighted.innerHTML = highlightChatML(contextWindow.value);
+    contextHighlighted.scrollTop = contextWindow.scrollTop;
+    contextHighlighted.scrollLeft = contextWindow.scrollLeft;
+}
+
 // Event Listeners
 contextInput.addEventListener('input', () => {
     // Skip if in chat mode (syncChatToContext handles updates)
@@ -436,6 +508,8 @@ contextInput.addEventListener('input', () => {
             fetchCandidates();
         }
     }, 500);
+
+    updateSyntaxHighlight();
 });
 
 // Update controls
@@ -952,6 +1026,7 @@ function syncChatToContext() {
     }
 
     contextInput.value = fullContext;
+    updateSyntaxHighlight();
 }
 
 function syncContextToChat() {
@@ -1331,6 +1406,7 @@ function adoptBeamPath(pathId) {
 
     // Set the context to the path's text
     contextInput.value = path.text;
+    updateSyntaxHighlight();
     fetchCandidates();
 
     // Clear the beam paths and tracked context so new paths will generate

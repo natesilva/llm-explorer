@@ -832,6 +832,76 @@ footer {
     flex: 1;
 }
 
+.input-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    position: relative;
+}
+
+#context-window {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    box-sizing: border-box;
+    background-color: var(--panel-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    padding: 1rem;
+    font-size: 1.1rem;
+    resize: none;
+    font-family: monospace;
+}
+
+textarea {
+    background-color: var(--panel-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    padding: 1rem;
+    font-size: 1.1rem;
+    resize: none;
+    font-family: monospace;
+}
+
+.context-highlighted {
+    background-color: var(--panel-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    padding: 1rem;
+    font-size: 1.1rem;
+    font-family: monospace;
+    white-space: pre-wrap;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* ChatML syntax highlighting colors */
+.hl-token-start,
+.hl-token-end {
+    color: #d19a66;
+    font-weight: bold;
+}
+
+.hl-role-system {
+    color: #56b6c2;
+    font-weight: bold;
+}
+
+.hl-role-user {
+    color: #c678dd;
+    font-weight: bold;
+}
+
+.hl-role-assistant {
+    color: #98c379;
+    font-weight: bold;
+}
+
+.hl-content-text {
+    color: var(--text-color);
+}
+
 .search-box {
     display: flex;
     gap: 0.5rem;

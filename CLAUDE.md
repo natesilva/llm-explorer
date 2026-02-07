@@ -102,6 +102,29 @@ Implemented as an approximation in Python:
 - No frontend build process—just edit `.js` files and refresh
 - FastAPI serves static files from `/static`
 
+## Git Conventions
+
+All Git commits must follow [conventional commit](https://www.conventionalcommits.org/) format:
+
+```
+<type>(<scope>): <subject>
+
+<optional body>
+
+<optional footer>
+```
+
+- **type**: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`
+- **scope**: Optional, e.g., `ui`, `llm`, `download`
+- **subject**: Write in imperative mood, not exceeding 50 chars
+- **body**: Wrap at 72 chars, explain *what* and *why*, not *how*
+
+Examples:
+- `feat(ui): add chat mode with system prompts`
+- `fix(llm): guard token selection and handle logprobs bugs`
+- `refactor(app): extract model path resolution to utils`
+- `docs: add architecture and behavior notes`
+
 ## Testing
 
 - `pytest` is included
