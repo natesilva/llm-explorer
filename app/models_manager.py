@@ -1,69 +1,12 @@
 import os
 import glob
 import time
-import json
 from urllib.parse import urlparse
-from pathlib import Path
 from huggingface_hub import HfApi, hf_hub_download
 
 from app.download_manager import DownloadManager, DownloadState
 
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "models")
-METADATA_FILE = os.path.join(os.path.dirname(__file__), "models_metadata.json")
-
-
-def load_model_metadata():
-    """Load model metadata from JSON file."""
-    if os.path.exists(METADATA_FILE):
-        try:
-            with open(METADATA_FILE, 'r') as f:
-                return json.load(f)
-        except (json.JSONDecodeError, IOError):
-            pass
-    return {}
-
-
-def save_model_metadata(metadata):
-    """Save model metadata to JSON file."""
-    try:
-        with open(METADATA_FILE, 'w') as f:
-            json.dump(metadata, f, indent=2)
-    except IOError:
-        pass
-
-
-def get_friendly_model_name(repo_id: str, api: HfApi = None) -> str:
-    """
-    Extract a friendly model name from HuggingFace metadata.
-    Returns the friendly name or the repo_id if unavailable.
-    """
-    if api is None:
-        api = HfApi()
-
-    try:
-        model_info = api.model_info(repo_id=repo_id)
-
-        # Check card_data.base_model first (most reliable for GGUF repos)
-        if hasattr(model_info, 'card_data') and model_info.card_data:
-            base_model = getattr(model_info.card_data, 'base_model', None)
-            if base_model:
-                # Strip organization prefix
-                if '/' in base_model:
-                    base_model = base_model.split('/', 1)[1]
-                return base_model
-
-        # Fallback: strip author and -GGUF suffix from model_id
-        model_id = model_info.model_id
-        if '/' in model_id:
-            model_id = model_id.split('/', 1)[1]
-        if model_id.endswith('-GGUF') or model_id.endswith('_GGUF'):
-            model_id = model_id[:-5]
-
-        return model_id
-
-    except Exception:
-        # If all else fails, return the repo_id
-        return repo_id
 
 
 def parse_huggingface_url(url: str) -> str:
@@ -149,24 +92,17 @@ class ModelManager:
         if not os.path.exists(MODEL_DIR):
             return []
 
-        metadata = load_model_metadata()
-
         for file_path in glob.glob(os.path.join(MODEL_DIR, "*.gguf")):
             filename = os.path.basename(file_path)
             size_bytes = os.path.getsize(file_path)
 
-            # Get metadata for this file
-            model_meta = metadata.get(filename, {})
-            friendly_name = model_meta.get('friendly_name', filename)
-            repo_id = model_meta.get('repo_id', '')
-
             models.append(
                 {
                     "filename": filename,
-                    "friendly_name": friendly_name,
+                    "friendly_name": filename,
                     "size_mb": round(size_bytes / (1024 * 1024), 2),
                     "path": file_path,
-                    "repo_id": repo_id,
+                    "repo_id": "",
                 }
             )
         return sorted(models, key=lambda x: x["filename"])
@@ -211,10 +147,6 @@ class ModelManager:
         manager = DownloadManager() if download_id else None
         tqdm_class = None
 
-        # Fetch friendly name before download
-        api = HfApi()
-        friendly_name = get_friendly_model_name(repo_id, api)
-
         # Set up progress tracking if download_id provided
         if manager and download_id:
             manager.set_state(download_id, DownloadState.IN_PROGRESS)
@@ -233,15 +165,6 @@ class ModelManager:
                 local_dir_use_symlinks=False,
                 tqdm_class=tqdm_class,
             )
-
-            # Save metadata after successful download
-            metadata = load_model_metadata()
-            metadata[local_filename] = {
-                "repo_id": repo_id,
-                "friendly_name": friendly_name,
-                "downloaded_at": time.time(),
-            }
-            save_model_metadata(metadata)
 
             if manager and download_id:
                 # Get file size for final update

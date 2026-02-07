@@ -381,9 +381,11 @@ async function selectToken(token) {
     }
 
     // Check for end token - stop auto-inference if found
-    const endTokenPatterns = ['<|end_of_text|>', '<|eot|>', '</s>', '<end>', '<|END|>'];
+    // Strip trailing whitespace first (models often add newlines after end tokens)
+    const textForEndCheckStripped = textForEndCheck.trimEnd();
+    const endTokenPatterns = ['<|end_of_text|>', '<|im_end|>', '<|eot|>', '</s>', '<end>', '<|END|>'];
     for (const pattern of endTokenPatterns) {
-        if (textForEndCheck.endsWith(pattern)) {
+        if (textForEndCheckStripped.endsWith(pattern)) {
             if (autoInferRunning) {
                 stopAutoInfer();
             }
@@ -1036,7 +1038,7 @@ function finishAssistantMessage() {
     if (currentAssistantContent) {
         // Strip end token patterns from the content (chat mode only)
         let cleanedContent = currentAssistantContent;
-        const endTokenPatterns = ['<|end_of_text|>', '<|eot|>', '</s>', '<end>', '<|END|>'];
+        const endTokenPatterns = ['<|end_of_text|>', '<|im_end|>', '<|eot|>', '</s>', '<end>', '<|END|>'];
         for (const pattern of endTokenPatterns) {
             cleanedContent = cleanedContent.replace(pattern, '');
         }

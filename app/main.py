@@ -148,12 +148,7 @@ def switch_model(request: SwitchModelRequest):
         engine.load_model(target_path)
 
         # Get friendly name from metadata
-        from app.models_manager import load_model_metadata
-        metadata = load_model_metadata()
-        model_meta = metadata.get(request.filename, {})
-        friendly_name = model_meta.get('friendly_name', request.filename)
-
-        return {"status": "success", "model": request.filename, "friendly_name": friendly_name}
+        return {"status": "success", "model": request.filename, "friendly_name": request.filename}
     except Exception as e:
         logger.error(f"Failed to load model {request.filename}: {e}")
         logger.error(traceback.format_exc())
