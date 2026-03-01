@@ -608,6 +608,12 @@ footer {
     display: none !important;
 }
 
+.tokens-hidden {
+    filter: blur(10px);
+    pointer-events: none;
+    user-select: none;
+}
+
 /* Slideover Panel */
 .panel-slideover {
     position: fixed;

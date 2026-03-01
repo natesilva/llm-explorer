@@ -8,6 +8,7 @@ const themeToggleBtn = document.getElementById('theme-toggle');
 const starterSelect = document.getElementById('starter-select');
 const clearContextBtn = document.getElementById('clear-context');
 const syntaxToggleBtn = document.getElementById('syntax-toggle');
+const revealToggleBtn = document.getElementById('reveal-toggle');
 const autoInferBtn = document.getElementById('auto-infer');
 
 // Chat mode elements
@@ -48,6 +49,7 @@ let isGeneratingResponse = false;
 
 // Syntax highlighting state
 let syntaxHighlightEnabled = false;
+let tokensHidden = false;
 let currentAssistantContent = '';
 let isFirstAssistantToken = false;  // Track first token to strip leading whitespace
 
@@ -76,9 +78,31 @@ function toggleTheme() {
 // Initialize theme on load
 initTheme();
 
+// Reveal toggle
+function setRevealState(hidden) {
+    tokensHidden = hidden;
+    const views = document.querySelectorAll('.view-content');
+    views.forEach(v => v.classList.toggle('tokens-hidden', hidden));
+    if (revealToggleBtn) {
+        revealToggleBtn.textContent = hidden ? '🙈' : '👁';
+    }
+    localStorage.setItem('tokens-hidden', hidden ? '1' : '0');
+}
+
+function initRevealState() {
+    const saved = localStorage.getItem('tokens-hidden');
+    setRevealState(saved === '1');
+}
+
+initRevealState();
+
 // Theme toggle event listener
 if (themeToggleBtn) {
     themeToggleBtn.addEventListener('click', toggleTheme);
+}
+
+if (revealToggleBtn) {
+    revealToggleBtn.addEventListener('click', () => setRevealState(!tokensHidden));
 }
 
 // Syntax toggle event listener
